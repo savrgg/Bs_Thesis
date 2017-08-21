@@ -1,0 +1,21 @@
+\chapter*{Prólogo}
+\label{ch:prologo}
+
+
+En esta tesis se aborda el problema de optimización planteado por el Análisis Discriminante Lineal de Fisher (ADLF); el cuál, se utilizará para resolver problemas de clasificación. El ADLF busca maximizar un cociente de la forma $\Tr(V^T A V) / Tr(V^T B V)$ sobre el conjunto de matrices ortogonales $V$ con $p$ columnas y $A, B$ matrices positivas definidas. Este problema era considerado computacionalmente difícil de resolver, por lo que era reemplazado por otras versiones simplificadas \cite{ngo2012trace} \cite{wang2007trace}. En esta tesis se busca demostrar que el ADLF, resuelto a través del método de Newton y del algoritmo de Lanczos, se puede resolver fácilmente sin necesidad de versiones simplificadas. Con esto, se logra una precisión comparable con otros algoritmos de clasificación lineales y con un tiempo de cómputo similar. 
+
+La tesis consta de tres capítulos y las conclusiones. En el primer capítulo se presenta el problema del ADLF y su solución. En el segundo, se enuncia el método Newton-Lanczos, así como la teoría asociada. En el tercer capítulo se presentan los resultados numéricos. Al final, se presentan las conclusiones a las que se llegaron una vez hechos los experimentos.
+
+Se comienza el primer capítulo introduciendo al ADLF dentro del contexto de aprendizaje de máquina; en particular, como un problema de clasificación lineal. Después, se busca la solución cuando $V \in {\rm I\!R}^{n}$; es decir, cuando $p = 1$. Como siguiente paso, se proporciona la generalización a $p$ dimensiones. Para finalizar el capítulo, se demuestra que el ADLF es equivalente a un problema escalar, por lo que se puede expresar en términos de una $f(\rho)$ y una $\rho$ unidimensional. Una vez dada la solución, se enuncian las condiciones de existencia y un intervalo en donde se encuentra el valor óptimo.
+
+El segundo capítulo aborda el método para resolver el ADLF: Newton-Lanczos. Al inicio, se da una breve presentación de la teoría que sustenta a los métodos de Lanczos, su costo computacional y las ventajas que tienen sobre los métodos tradicionales. Después, se enuncia el algoritmo para alcanzar la solución óptima: el algoritmo de Newton-Lanczos. Al tener como base el método de Newton, se requiere del cómputo de la derivada de $f(\rho)$, por lo que se calcula en este capítulo. Al final, se proporcionan las condiciones necesarias de optimalidad.
+
+En el tercer capítulo se presentan los experimentos numéricos sobre las bases JAFFE y MNIST. Se da una breve introducción de su preprocesamiento, para continuar con un ejemplo donde se proyecta a una dimensión de tamaño 20. Al final, se compara la precisión del ADLF vía Newton-Lacnzos contra el Análisis Discriminante Lineal (ADL) y la Regresión Logística Múltiple (RLM) para diferentes $p$. Al final, se realiza una comparación del tiempo de cómputo.
+
+Para todo el proyecto se utilizó el lenguaje de programación R y la paquetería \textit{ProjectTemplate}, que sirve para gestionar proyectos de análisis. Para asegurar la portabilidad y reproducibilidad del proyecto se utilizó la paquetería \textit{Packrat}. Por último, para los cálculos, se utilizó la biblioteca de \textit{LAPACK (Fortran)}  en su versión para OS X 10.11.4 (\textit{liblapack.dylib)}. 
+
+Los códigos relacionados a esta tesis se encuentran en: 	
+\\https://github.com/savrgg/TraceRatio\_Optimization
+
+
+

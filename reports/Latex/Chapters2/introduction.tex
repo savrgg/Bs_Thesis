@@ -1,0 +1,23 @@
+\chapter{Prólogo}
+\label{ch:prologo}
+
+%\begin{chapterquote}{Leslie Lamport}
+%	Formal mathematics is nature's way of letting you %know how sloppy
+%your mathematics is.
+%\end{chapterquote}
+
+Esta tesis aborda el tema del Análisis Discriminante de Fisher. Este problema busca encontrar la proyección de los datos a un espacio p-dimensional que maximice el cociente de la matriz de dispersión entre-clases y la matriz de dispersión intra-clases. La solución era considerada computacionalmente costosa de encontrar, por lo que era remplazada por versiones simplificadas del problema.
+
+En este texto, se aborda una propuesta de solución que es computacionalmente accesible. El costo es comparable con otros dos problemas de clasificación lineal que son mencionados en la literatura estadística, el análisis discriminante y la regresión logística multinomial. Las bases de datos que se utilizaron para comparar los métodos, fueron JAFFE y MNIST.
+
+El segundo capítulo ubica el problema en el contexto del aprendizaje de máquina. Como primera instancia, se presenta dentro de los métodos de aprendizaje supervisado, para después ubicarlo en los problemas de clasificación lineal. Estos métodos pueden pertenecer a alguno de los siguientes tres grupos: métodos discriminativos, métodos generativos y funciones discriminantes. Al final del capítulo se introducen los criterios de selección, incluyendo el error de clasificación y la pérdida esperada. 
+
+El tercer capítulo profundiza en el Discriminante Lineal de Fisher. Se presenta la dispersión interna, la dispersión entre clases y la dispersión total. Después, se encuentra la solución cuando el espacio a proyectar es de dimensión 1 y se generaliza a $p$ dimensiones. Al final del capítulo, se demuestra que el problema es equivalente a un problema escalar, por lo que se puede expresar en términos de una $f(\rho)$, una $\rho$ unidimensional. A continuación, se dan las condiciones de existencia de la solución y un intervalo en donde se encuentra el valor óptimo.
+
+El cuarto capítulo introduce el método Newton-Lanczos para encontrar la $\rho$ óptima. Se da una breve presentación de la teoría que sustenta a los métodos de Lanczos, su costo computacional y las ventajas que tienen sobre los métodos tradicionales. En seguida de esto, se presenta la propuesta de solución: El método Newton-Lanczos. Este requiere el cómputo de la derivada de $f(\rho)$, por lo que se se calcula en este capítulo. Al final, se proporcionan las condiciones necesarias de optimalidad.
+
+El quinto capítulo presenta los experimentos numéricos sobre las bases utilizadas. Se da una breve introducción de su preprocesamiento, para después continuar con un ejemplo donde se proyecta a una dimensión de tamaño 20. Al final del capítulo se compara el desempeño con el análisis discriminante lineal y con la regresión logística mulitinomial para diferentes $p$ y se mide el tiempo de cómputo.
+
+Para todo el proyecto se utilizó el lenguaje de programación R y la paquetería \textit{ProjectTemplate}, que sirve para gestionar proyectos de análisis. Para asegurar la portabilidad y reproducibilidad del proyecto,
+se utilizó la paquetería \textit{Packrat}. Por último, para los cálculos, se utilizó la biblioteca de \textit{LAPACK (Fortran)}  en su versión para OS X 10.11.4 (\textit{liblapack.dylib)}. 
+

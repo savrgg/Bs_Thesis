@@ -1,0 +1,28 @@
+\chapter{Conclusiones}
+\label{ch:conclusion}
+
+% Párrafo intro 
+En este trabajo se expone la técnica de optimización de Newton-Lanczos aplicada al problema de aprendizaje supervisado del Análisis Discriminante Lineal de Fisher (ADLF). El ADLF busca encontrar la mejor matriz de proyección que maximice el cociente de trazas, logrando que los individuos de una misma clase sean proyectados lo más cercano posible entre ellos y lo más separado posible de otra clase. Anteriormente, la solución era considera computacionalmente costosa de resolver; sin embargo, en la actualidad se puede aprovechar la velocidad de convergencia del método de Newton y la rapidez del algoritmo de Lanczos para calcular eigenpares. 
+
+% ------ primero
+
+El método de Lanczos es muy efectivo para calcular solamente algunos de los eigenpares de las matrices. Bajo el contexto de aritmética inexacta, Lanczos implementado con reortogonalización completa resulta ser más eficiente que la factorización SVD, cuando se desea calcular menos del 5 \% de los eigenpares. Aunque este número parece ser demasiado pequeño resulta de gran utilidad; por ejemplo, si la matriz tiene dimensión de $1000 \times 1000$, tener 50 eigenpares podría ser adecuado para el problema. 
+
+\newpage
+En este trabajo de tesis se comparó el método ADLF vía Newton-Lanczos con el Análisis Discriminante Lineal (ADL) y la técnica de Regresión Lineal Múltiple (RLM). La comparación se realizó empleando las bases JAFFE y MNIST. Los resultados obtenidos con ADLF vía Newton-Lanczos tuvieron un desempeño similar en comparación con los otros métodos en términos de tasa de reconocimiento y tiempo de cómputo.
+
+Las conclusiones más relevantes de esta tesis son las siguientes:
+
+\begin{itemize}
+\item Se implementó computacionalmente una técnica de optimización que anteriormente resultaba difícil de resolver.
+\item Una de las principales ventajas de esta metodología es que no requiere ningún supuesto sobre la distribución de los datos.
+\item Se evaluó el desempeño de esta metodología con respecto a técnicas conocidas y los resultados fueron satisfactorios.
+\item Se realizaron dos pruebas diferentes y se obtuvo que en algunos casos el ADLF vía Newton-Lanczos tuvo una precisión mayor con respecto a los otros dos métodos.
+\end{itemize}
+
+
+% ------ Tercero
+Una de las complicaciones del algoritmo de Lanczos es la reortogonalización de la base. En este estudio se utilizó el método de reortogonalización completa; sin embargo, existen modificaciones al algoritmo que pueden ser exploradas con el objetivo de lograr mayor eficiencia en términos computacionales. Por ejemplo, J.W. Demmel (1997) \cite{demmel1997applied} propone algunas alternativas que pueden ser utilizadas para mejorar el proceso de reortogonalización de la base en el algoritmo de Lanczos.
+
+
+

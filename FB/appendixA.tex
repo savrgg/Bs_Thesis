@@ -1,0 +1,218 @@
+\chapter{Apéndice A: Optimización de $Tr(V^TA V)$}
+\label{ch:appendixA}
+
+
+Sea $A \in {\rm I\!R}^{nxn}$ una matriz simétrica cuya factorización espectral es:
+
+\begin{equation*}
+\begin{aligned}
+	A =& U^T \Lambda U \qquad U^T U = I_n\\
+	\Lambda =& diag(\lambda_{A_1}, ..., \lambda_{A_n} )
+\end{aligned}
+\end{equation*}
+
+donde $\lambda_{A_1} \geq \lambda_{A_2} \geq ... \geq \lambda_{A_n}$ son los valores propios de $A$ y $U$ una matriz ortogonal. En este apéndice se demostrará que:
+
+\begin{equation}\label{A1:1}
+\begin{aligned}
+\max_{\substack{V^T V = I \\V \in {\rm I\!R}^{nxp} }}Tr(V^T A V) = \lambda_{A_1} + \lambda_{A_2} + ... + \lambda_{A_p}
+\end{aligned}
+\end{equation}
+
+\section{Problema relajado}
+Sean $\mathcal{U}_p$ y $\mathcal{V}_p$ dos conjuntos de matrices en ${\rm I\!R}^{nxp}$ tales que:
+
+\begin{equation*}
+\begin{aligned}
+\mathcal{U}_p =& \{V \in {\rm I\!R}^{nxp} | V^TV = I_p\}	\\
+\mathcal{V}_p =& \{V \in {\rm I\!R}^{nxp} | diag(V^TV) = I_p\}	
+\end{aligned}
+\end{equation*}
+
+El conjunto $\mathcal{V}_p$ contiene a todas las matrices donde que cada columna tiene norma euclidiana igual a 1.
+
+\begin{lemma}
+El conjunto $\mathcal{V}_p$ es compacto en ${\rm I\!R}^{nxp}$
+\begin{proof}
+Por definición, si $V \in \mathcal{V}_p$ entonces $||V||_F = \sqrt(p)$.
+Más aún, $\mathcal{V}_p$ contiene todos sus puntos límite.
+\end{proof}
+\end{lemma}
+
+Si se relaja el problema original como:
+\begin{equation} \label{A1:2}
+	\max_{V \in \mathcal{V}_p} Tr(V^T A V)
+\end{equation}
+Como $\mathcal{V}_p$ es un conjunto compacto, la función continua $Tr(V^T AV)$ alcanza su valor máximo (o mínimo) en este conjunto. Ahora, como $\mathcal{U}_p \subset \mathcal{V}_p$, se tiene inmediatamente la desigualdad:
+
+\begin{equation} \label{A1:3}
+\max_{V \in \mathcal{U}_p} Tr(V^T A V) \leq \max_{V \in \mathcal{V}_p} Tr(V^T AV)	
+\end{equation}
+
+Por lo tanto, se se procede a establecer el siguiente resultado:
+
+\begin{theorem}\label{A1:T1}
+\begin{equation*}
+	\max_{V \in \mathcal{V}_p} Tr(V^T A V) = \lambda_{A_1} + \lambda_{A_2} + ... + \lambda_{A_p}
+\end{equation*}
+\end{theorem}
+
+\begin{proof}
+Para $V \in \mathcal{V}_p$ con $V = (v_1 \enskip v_2 \enskip ...\enskip v_p)$ y $v_j$ la j-ésima columna de $V$. Se define el vector:
+
+\begin{equation*}
+	\mathbf{v} = (v_1^T\enskip v_2^T \enskip...\enskip v_p^T)^T \enskip \in \enskip {\rm I\!R}^{np}
+\end{equation*}
+
+o lo que es equivalente:
+\begin{equation*}
+\mathbf{v} = \left(\!
+    \begin{array}{c}
+		v_1 \\
+		v_2 \\
+		\vdots \\
+		v_p \\
+\end{array}
+  \!\right) \quad
+\end{equation*}
+
+Entonces la $Tr(V^TAV) = v_1^TAv_1 + v_2^TAv_2 + ... + v_p^TAv_p$ y el problema \ref{A1:2} puede ser formulado como sigue:
+
+\begin{equation} \label{A1:4}
+	\max_{\substack{\mathbf{v}^T \mathbb{B}_j \mathbf{v} = 1 \\ j = 1, ..., p}} \mathbf{v}^T\mathbb{A} \mathbf{v}
+\end{equation}
+
+con las matrices $\mathbb{A}$ y $\mathbb{B}_j$:
+
+
+\begin{equation*}
+\mathbb{A} = \left(\!
+    \begin{array}{cccccc}
+		A & 0 & \hdots & 0 & \hdots & 0 \\
+		0 & A & \hdots & 0 & \hdots & 0 \\
+		\vdots & \vdots & \vdots & \vdots & \vdots & \vdots \\
+		0 & 0 &  \hdots & A & \hdots & 0 \\
+		\vdots & \vdots & \vdots & \vdots & \vdots & \vdots \\
+		0 & 0 & \hdots & 0 & \hdots & A \\
+\end{array}
+  \!\right) \quad
+\end{equation*}
+
+
+\begin{equation*}
+\mathbb{B}_j = \left(\!
+    \begin{array}{cccccc}
+		0 & 0 & \hdots & 0 & \hdots & 0 \\
+		0 & 0 & \hdots & 0 & \hdots & 0 \\
+		\vdots & \vdots & \vdots & \vdots & \vdots & \vdots \\
+		0 & 0 &  \hdots & I_n & \hdots & 0 \\
+		\vdots & \vdots & \vdots & \vdots & \vdots & \vdots \\
+		0 & 0 & \hdots & 0 & \hdots & 0 \\
+\end{array}
+  \!\right) \quad
+\end{equation*}
+
+En ambas matrices hay $p$ bloques en los renglones y $p$ bloques en las columnas. Para $\mathbb{B}_j$ el bloque $(j,j)$ es $I_n$ y todos los demás son matrices cero. De esta manera, la función lagrangiana asociada al problema es:
+
+\begin{equation*}
+\mathcal{L}_j(\mathbf{v}, \eta) = \mathbf{v}^T \mathbb{A} \mathbf{v} - \sum\limits_{j=1}^{p}(\eta_j(\mathbf{v}^T\mathbb{B}_j\mathbf{v}-1))
+\end{equation*}
+
+Las condiciones de primer orden para la solución óptima son (considerando que $A$ es simétrica:
+\begin{equation}\label{A1:5}
+\begin{aligned}
+	\nabla_{\mathbf{v}} \mathcal{L}(\mathbf{v}, \eta) =& \quad 2 \mathbb{A}\mathbf{v} - 2 \sum\limits_{j=1}^p (\eta_j(\mathbf{v}^T \mathbb{B}_j \mathbf{v})) = \quad 0 \\
+	\nabla_{\eta_j} \mathcal{L}(\mathbf{v}, \eta)  =& \quad \mathbf{v}^T \mathbb{B}_j \mathbf{v} = 1 \quad con \quad j = 1, ...,p 
+\end{aligned}
+\end{equation}
+
+De la primera ecuación de \ref{A1:5}, se tiene que:
+
+\begin{equation*}
+	\left(\mathbb{A}-\sum\limits_{j=1}^p \eta_j \mathbb{B}_j \right) v = 0
+\end{equation*}
+
+Donde la matriz $(\mathbb{A}-\sum\limits_{j=1}^p \eta_j \mathbb{B}_j)$ es diagonal a bloques. De hecho, el bloque $(j,j)$ es:
+
+\begin{equation*}
+(A-\eta_j I_n)v_j = 0 \quad \Rightarrow \quad Av_j = \eta_j v_j	
+\end{equation*}
+
+Entonces, $\eta_j$ debe ser un eigenvalor de A y $v_j$ su correspondiente eigenvector. Tomando de nuevo la ecuación de arriba, y multiplicándola por $v^T$ se obtiene:
+
+\begin{equation*}
+v^T \mathbb{A}v = \sum\limits_{j=1}^p (\eta_j)(v^T \mathbb{B}_j v)	
+\end{equation*}
+
+Ahora, usando la segunda ecuación de \ref{A1:5}, se tiene que:
+
+\begin{equation*}
+	v^T \mathbb{A}v = \sum\limits_{j=1}^p \eta_j
+\end{equation*}
+
+Por lo tanto, con el fin de maximizar la función $v^T \mathbb{A} v$ en $\mathcal{V}_p$, se deben escoger los primeros $p$ eigenvalores de la matriz A. Esto es:
+
+\begin{equation*}
+	\eta_j = \lambda_{A_j}, \qquad j = 1, ..., p
+\end{equation*}
+
+\end{proof}
+
+
+Ahora, se tienen todas las piezas para demostrar el resultado principal.
+
+
+\begin{theorem}\label{A1:T2}
+\begin{equation*}
+\max_{\substack{V^TV= I_p \\V \in {\rm I\!R}^{nxp}}} Tr(V^T A V)	= \lambda_{A_1} + \lambda_{A_2} + ... +\lambda_{A_p}
+\end{equation*}
+\end{theorem}
+
+\begin{proof}
+Se ha mostrado que:
+\begin{equation*}
+\max_{V \in \mathcal{U}_p} Tr(V^T A V)	\leq \lambda_{A_1} + \lambda_{A_2} + ... +\lambda_{A_p}	
+\end{equation*}
+\end{proof}
+
+Considerando la matrix $U \in {\rm I\!R}^{nxn}$ de la factorización espectral de A, tal que $U = (u_1 \enskip u_2 \enskip ... \enskip u_n)$. Tomando las primeras $p$ columnas de $U$ se define $U^*$:
+
+
+
+\begin{equation*}
+\begin{aligned}
+    U^* =& (u_1 \enskip u_2\enskip ...\enskip u_p) \quad con \quad U^* \in \mathcal{U}_p \quad y \\
+	Tr(U^* A U) =& \lambda_{A_1} + \lambda_{A_2} + ... + \lambda_{A_p}
+\end{aligned}
+\end{equation*}
+
+
+
+\section{Observaciones finales}
+
+Se toman los resultados de la sección anterior para hacer las siguientes observaciones:
+
+
+\begin{remark}
+Se puede extender el último teorema, usando el mismo conjunto $\mathcal{V}_p$ y cambiando la maximización a minimización para obtener que:
+
+\begin{equation}\label{A1:6}
+\min_{V \in \mathcal{U}_p} Tr(V^T A V)	= \lambda_{A_n} + \lambda_{A_{n-1}} + ... +\lambda_{A_{n-(p-1)}}
+\end{equation}
+\end{remark}
+
+
+\begin{remark}
+Cuando $p = 1$, se pueden obtener las bien conocidas propiedades del cociente de Raleigh:
+
+\begin{equation}\label{A1:7}
+\begin{aligned}
+\left(\min_{v^vv = 1} v^T A v	\right)=& \lambda_{A_n} \\
+\left(\max_{v^vv = 1} v^T A v	\right)=& \lambda_{A_1}
+\end{aligned}
+\end{equation}
+\end{remark}
+
+
+
+

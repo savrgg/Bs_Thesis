@@ -1,0 +1,539 @@
+\chapter{El Método Newton-Lanczos}
+\label{ch:chapter3}
+
+En el capítulo anterior se propuso una función no creciente $f(\rho)$ cuya raíz resulta ser la solución óptima para el problema del Discriminante Lineal de Fisher:
+
+\begin{equation} \label{eq:3.1}
+	f(\rho) = \max_{V^T V = I} Tr(V^T(S_E - \rho S_I)V)
+\end{equation}
+
+El algoritmo propuesto para encontrar la solución recibe el nombre de Newton-Lanczos\cite{ngo2012trace}. Para entenderlo a profundidad, se explicarán brevemente los métodos de Lanczos que tridiagonalizan una matriz simétrica, para después calcular eficientemente los primeros (últimos) eigenvalores. Después, será implementado junto al método iterativo de Newton, que calcula el nuevo valor de $\rho_{n}$ para cada paso. Para esto, se requiere el cómputo de la derivada de $f(\rho)$, por lo que se desarrollará su forma analítica. Finalizando, se proporcionarán las condiciones necesarias de optimalidad.
+
+La primera división de los métodos para calcular eigenvectores y eigenvalores que propone J. Demmel \cite{demmel1997applied} depende si la matriz es simétrica o no lo es. Después hace una sub-clasificación dependiendo si el método es iterativo o directo. Para este texto solo se calcularán los eigenvalores de matrices simétricas, por lo que el procedimiento a seguir sera el siguiente:
+
+
+\begin{itemize}
+\item Tridiagonalizar la matriz simétrica por un método iterativo
+\item Encontrar los eigenvalores por medio de la iteración tridiagonal QR (LAPACK DSTEVD)
+\end{itemize}
+\section{Métodos de Lanczos}
+Antes de presentar los métodos de Lanczos, se dará una breve introducción acerca del costo computacional del algoritmo QR y la importancia de tridiagonalizar la matriz \cite{demmel1997applied}.  Sea $A \in {\rm I\!R}^{n \times n}$, entonces su descomposición $QR$ toma $O(n^3)$ flops. Suponiendo el mejor escenario en el que cada eigenvalor se encuentra con una iteración, tomaría $O(n^4)$ flops para calcular todos los eigenvalores de una matriz. Por otra parte, al tridiagonalizar la matriz $A$ se reduce el costo computacional de la descomposición $QR$ a $O(n^2)$ flops. De esta manera, tomaría $O(n^3)$ flops encontrar todos los eigenvalores. Una descripción más detallada del costo computacional de los algoritmos puede encontrarse en \cite{demmel1997applied}.
+
+El primer paso, la tridiagonalización, ha sido muy estudiado y existen algoritmos especializados para distintos tipos de matrices simétricas. Si la matriz es de gran dimensión y rala, entonces se recomienda usar el método de Lanczos \cite{golub2012matrix}. En otro caso, existen las transformaciones Householder y las rotaciones de Givens \cite{golub2012matrix}. El método de Lanczos realiza tridiagonalizaciones parciales de la matriz original $A$, donde cada una es de tamaño $p \times p$ con $p\leq n$. Un aspecto interesante es que las matrices parciales van aproximando los eigenvectores extremos antes que la tridiagonalización esté completa. Por este motivo, el algoritmo es usado cuando se requieren solo algunos de los eigenvalores. Con respecto al costo computacional, es del orden $O(n^3)$, por lo que el algoritmo completo se mantiene en el mismo orden. 
+
+Lanczos en aritmética exacta tiene muchas ventajas computacionales y converge rápidamente a los eigenvalores reales, pero con aritmética inexacta es difícil usarlo en la práctica \cite{golub2012matrix}. El problema que se presenta es que los eigenvectores van perdiendo la ortogonalidad entre ellos conforme la dimensionalidad y las iteraciones incrementan. Los textos \cite{demmel1997applied}\cite{golub2012matrix} incluyen algoritmos para solucionar este problema.
+
+En la siguiente subsección se presentará el algoritmo original de Lanczos; se ejemplificará como los eigenvalores de la matriz tridiagonal convergen a los originales y se presenta el problema de \textit{ghost eigenvalues} \cite{demmel1997applied}, que son los eigenvalores que surgen al perder la ortogonalidad en aritmética inexacta.
+
+\subsection{Algoritmo de Lanczos}
+
+El algoritmo de Lanczos busca calcular los elementos de esta matriz tridiagonal directamente. Definiendo $Q^T A Q = T$, con $Q = [q_{(1)} \enskip|\enskip q_{(2)} \enskip|\enskip ... \enskip|\enskip q_{(n)}]$ ortogonal, y $T_n$ tridiagonal igual a:
+
+\begin{equation}\label{eq:3.2}
+T_n = \left(\!
+    \begin{array}{cccccc}
+      \alpha_1 & \beta_2 &  &  &  & 0\\
+      \beta_2  & \alpha_2 & \beta_3 &  &  & \\
+               & \beta_3 & \alpha_3 &  \ddots  & & \\
+               &         & \ddots & \ddots & \beta_{n-1}& \\
+               &  &  &  \beta_{n-1} & \alpha_{n-1} & \beta_n\\
+       0       &  &  &  & \beta_n & \alpha_{n}\\
+    \end{array}
+  \!\right), \quad
+\end{equation}
+
+Como $q_{(1)}$ es una columna de Q, entonces $q_1^T = [q_{11},\enskip q_{21},\enskip ... ,\enskip q_{n1}]$. De esta manera, se tiene que $AQ = QT$. Descomponiendo la multiplicación $AQ =[Aq_{(1)} \enskip|\enskip Aq_{(2)} \enskip|\enskip ... \enskip|\enskip Aq_{(n)}]$ e igualándola a cada columna de $QT$, se tiene que $Aq_{(1)}$ \cite{golub2012matrix}:
+
+\begin{equation*}
+\begin{aligned}
+Aq_{(1)} =\quad &  q_{(1)(1)} \alpha_{(1)}       &+\quad q_{(1)(2)} \beta_{(2)} \quad&+ \\
+     & q_{(2)(1)}   \alpha_{(1)}       &+\quad q_{(2)(2)} \beta_{(2)} \quad&+ \\
+     &          \qquad         \vdots&\vdots \qquad     & \\
+     & q_{(n)(1)}   \alpha_{(1)}       &+\quad q_{(n)(2)} \beta_{(2)} \quad& \\
+Aq_{(1)} =\quad & \alpha_{(1)} q_{(1)} &+\quad \beta_{(2)} q_{(2)}   \qquad& 
+\end{aligned}
+\end{equation*}
+
+Ahora, para $i = 2, ..., n-1$
+  
+\begin{equation*}
+\begin{aligned}
+Aq_{(i)} =\quad &  q_{(i-1)(i-1)}\beta_{(i)}  &+ \enskip q_{(i-1)(i)}\alpha_{(i)} &+ \enskip q_{(i-1)(i+1)} \beta_{(i+1)} &+ \\
+     & q_{(i)(i-1)}\beta_{(i)}       &+ \enskip q_{(i)(i)}\alpha_{(i)}\enskip   &+\enskip q_{(i)(i+1)} \beta_{(i+1)}   &+ \\
+     & \vdots &          \qquad \qquad \quad \vdots & &\\
+     & q_{(n)(i-1)}\beta_{(i)}      &+\enskip q_{(n)(i)}\alpha_{(i)} \enskip  &+\enskip q_{(n)(i+1)} \beta_{(i+1)}   & \\
+Aq_{(i)} =\quad & \beta_{(i)} q_{(i-1)}      &+ \enskip\quad \alpha_{(i)} q_{(i)} \quad    &+\enskip \beta_{(i+1)} q_{(i+1)}      &
+\end{aligned}
+\end{equation*}
+
+Por último, para $Aq_n$:
+
+\begin{equation*}
+\begin{aligned}
+Aq_{(n)} =\quad &  q_{(1)(n)} \alpha_{(n)}       &+\quad q_{(1)(n-1)} \beta_{(n)} \quad&+ \\
+     & q_{(2)(n)}   \alpha_{(n)}       &+\quad q_{(2)(n-1)} \beta_{(n)} \quad&+ \\
+     &          \qquad         \vdots&\vdots \qquad     & \\
+     & q_{(n)(n)}   \alpha_{(n)}       &+\quad q_{(n)(n-1)} \beta_{(n)} \quad& \\
+Aq_{(n)} =\quad & \alpha_{(n)} q_{(n)} &+\quad \beta_{(n)} q_{(n-1)}   \qquad& 
+\end{aligned}
+\end{equation*}
+
+
+Si se define $q_{(0)} = 0$, entonces se puede resumir el paso como:
+
+\begin{equation}\label{eq:3.3}
+  Aq_{(i)} = \beta_{(i)} q_{(i-1)} + \alpha_{(i)} q_{(i)}+ \beta_{(i+1)} q_{(i+1)}
+\end{equation}
+
+para $i = 1, .... n-1$. Multiplicando esta expresión por $q_{(i)}^T$, y usando el supuesto de ortogonalidad, entonces $q_{(i)}^T q_{(j)} = 0$ con $i \neq j$. De esta manera resulta la siguiente expresión:
+
+\begin{equation}\label{eq:3.4}
+\begin{aligned}
+  q_{(i)}^TAq_{(i)} &=  q_{(i)}^T\alpha_{(i)} q_{(i)}  
+                    &= \alpha_{(i)}
+\end{aligned}
+\end{equation}
+
+Por otra parte, despejando $\beta_{(i+1)} q_{(i+1)}$ de \ref{eq:3.3}, se tiene que
+
+\begin{equation}\label{eq:3.5}
+\begin{aligned}
+\beta_{(i+1)} q_{(i+1)}  =& Aq_{(i)} - \beta_{(i)} q_{(i-1)} - \alpha_{(i)} q_{(i)} \\ 
+=& (A - \alpha_{(i)} I) q_{(i)} - \beta_{(i)} q_{(i-1)} = r_{(i)}
+\end{aligned}
+\end{equation}
+
+Con la ecuación \ref{eq:3.5}, $q_{(i+1)} = \frac{r_{(i)}}{\beta_{(i+1)}}$. Calculando la norma de $r_{(i)}$, se tiene que 
+
+\begin{equation}\label{eq:3.6}
+\begin{aligned}
+||r_{(i)}||_2 =& |\beta_{(i+1)}| ||q_{(i+1)}||_2 \\
+              =& |\beta_{(i+1)}|
+\end{aligned}
+\end{equation}
+ 
+Cuando $r_k =0$ entonces la iteración se detiene. \cite{golub2012matrix}
+
+\pagebreak
+
+\textbf{Implementación en aritmética exacta}\\
+
+Sea $ A \in {\rm I\!R}^{n \times n}$ una matriz simétrica y $q_i \in {\rm I\!R}^{n}$. Entonces el algoritmo que se presenta a continuación produce una matriz $T_k \in {\rm I\!R}^{k \times k}$ tridiagonal tal que los eigenvalores de $T_k$ convergen a los de la matriz original $A$ \cite{golub2012matrix}. 
+
+\begin{algorithm}[H] 
+ $q_0$ $\leftarrow$ $0$\;
+ $r_0$ $\leftarrow$ vector aleatorio\;
+ $\beta_1$ $\leftarrow$ $||r_0||_2$\;
+ $q_1 \leftarrow r_0 / \beta_1$\;
+ $\alpha_1 \leftarrow q_1^T A q_1$\;
+ $eps = 0.0000001$\;
+ $k = 1$ \;
+ \While{($\beta_k > eps$)}{
+  $r_k \leftarrow A q_k - \alpha_k q_k - \beta_k q_{k-1}$\;
+  $\beta_{k+1} \leftarrow ||r_{k-1}||_2$\;
+  $q_{k+1} \leftarrow r_{k+1}/\beta{k+1}$\;
+  $\alpha_{k+1} \leftarrow q_{k+1}^T A q_{k+1}$\;
+  $k \leftarrow k+1$\;
+ }
+ \caption{Algoritmo de Lanczos}
+\end{algorithm}
+
+\begin{example}
+Se usará la iteración \ref{eq:3.3} y las formulas \ref{eq:3.4}, \ref{eq:3.6} para calcular $\alpha_i$ y $\beta_i$. La matriz del ejemplo es de dimensión 10 generada con cada elemento generado aleatoriamente entre los valores $(0,1)$. A continuación se muestra la matriz, pero esta se encuentra redondeada a dos dígitos decimales. Se tomó un ejemplo pequeño para que no aparezcan los \textit{ghost eigenvalues}, pero se mostrará también como aparecen al modificar el tamaño de la matriz de $10x10$ a $30x30$.
+
+\begin{equation*}
+A = \left(\!
+    \begin{array}{cccccccccc}
+0.11 & 0.62 & 0.62 & 0.01 & 0.69 & 0.84 & 0.3 & 0.83 & 0.2 & 0.5 \\
+0.62 & 0.61 & 0.86 & 0.23 & 0.54 & 0.29 & 0.16 & 0.05 & 0.26 & 0.68 \\
+0.62 & 0.86 & 0.64 & 0.67 & 0.28 & 0.27 & 0.04 & 0.46 & 0.99 & 0.48 \\
+0.01 & 0.23 & 0.67 & 0.51 & 0.92 & 0.19 & 0.22 & 0.27 & 0.81 & 0.24 \\
+0.69 & 0.54 & 0.28 & 0.92 & 0.29 & 0.23 & 0.81 & 0.3 & 0.55 & 0.77 \\
+0.84 & 0.29 & 0.27 & 0.19 & 0.23 & 0.32 & 0.53 & 0.51 & 0.65 & 0.07\\
+0.3 & 0.16 & 0.04 & 0.22 & 0.81 & 0.53 & 0.91 & 0.18 & 0.31 & 0.31\\
+0.83 & 0.05 & 0.46 & 0.27 & 0.3 & 0.51 & 0.18 & 0.76 & 0.62 & 0.72\\
+0.2 & 0.26 & 0.99 & 0.81 & 0.55 & 0.65 & 0.31 & 0.62 & 0.33 & 0.5\\
+0.5 & 0.68 & 0.48 & 0.24 & 0.77 & 0.07 & 0.31 & 0.72 & 0.5 & 0.15\\
+\end{array}
+  \!\right), \quad
+\end{equation*}
+
+Los eigenvalores originales de esta matriz con una epsilon de 0.0000001 son:
+
+\begin{center}
+\begin{tabular}{ | c | c|  c |c | c|  c |c | c|  c |c | c | c|  c |c | c|  c |c | c|  c |c |} 
+\hline
+4.65 & 1.17 & 1.02 & 0.78 & 0.38 & -0.09 & -0.45 & -0.62 & -0.93 & -1.27\\
+\hline
+\hline
+\end{tabular}
+\end{center}
+
+Ahora, para esta matriz se aplicó el algoritmo de Lanczos con distintas $k$, por lo que se generaron tridiagonalizaciones parciales de distintos tamaños. Los eigenvalores generados en cada una de estas matrices son los siguientes.
+
+\begin{center}
+\begin{tabular}{ | c | c|  c | c | c | c | c | c | c | c | } 
+\hline
+$It.$ & $Val1$ & $Val2$ & $Val3$ & $Val4$ & $Val5$ & $Val6$ & $Val7$ & $Val8$ & $Val9$\\
+\hline
+\hline
+3 & 4.65 & 0.43 & -1.18 & & & & & &\\
+\hline
+6 & 4.65 & 1 & 0.6 & -0.07 & -0.65 & -1.27 & & & \\
+\hline
+9 & 4.65 & 1.12 & 0.98 & 0.74 & 0.35 & -0.1 & -0.58 & -0.91 & -1.27  \\
+\hline
+\end{tabular}
+\end{center}
+
+Como se observa, los eigenvalores comienzan a converger a los originales conforme las iteraciones aumentan. En la décima iteración, el método alcanza los eigenvalores originales. Como la literatura menciona \cite{golub2012matrix}, los eigenvalores más grandes en valor absoluto comienzan a aparecer desde antes de que el método acabe la iteración. Por ejemplo, el eigenvalor 4.65, aparece desde la segunda iteración; el eigenvalor más chico, -1.27, converge desde la quinta iteración y así se van aproximando cada uno. Ahora, los eigenvectores se pueden encontrar multiplicando los eigenvectores de $T_k$ por la matriz $Q = [q_1, q_2, ... , q_k]$. De esta manera, $Q \in {\rm I\!R}^{n \times k}$ y $Q^T T_K \in {\rm I\!R}^{n \times k}$.
+
+En el segundo ejemplo, cuando la matriz es de $30x30$, los primero 10 eigenvalores de la matriz original son:
+\begin{center}
+\begin{tabular}{ | c | c|  c |c | c|  c |c | c|  c |c | c | c|  c |c | c|  c |c | c|  c |c |} 
+\hline
+15.45 & 2.8 & 2.48 & 2.39 & 1.77 & 1.71 & 1.24 & 1.13 & 0.93 & 0.9\\
+\hline
+\hline
+\end{tabular}
+\end{center}
+
+Mientras que los 10 primeros eigenvectores encontrados por el método de Lanczos son:
+\begin{center}
+\begin{tabular}{ | c | c|  c |c | c|  c |c | c|  c |c | c | c|  c |c | c|  c |c | c|  c |c |} 
+\hline
+15.45 & 15.45 & 15.43 & 2.8 & 2.48 & 2.39 & 1.77 & 1.71 & 1.24 & 1.12\\
+\hline
+\hline
+\end{tabular}
+\end{center}
+
+En este ejemplo, el primer eigenvector, producto punto el ultimo tienen el valor $0.6648781$, por lo que se claramente que se ha perdido la ortogonalidad
+
+\end{example}
+
+Para hacer frente a la pérdida de ortogonalidad entre los vectores, se han creado distintos métodos, los cuales se basan en la reortogonalización de la base de vectores. \cite{demmel1997applied} Esta puede realizarse en $O(n^2)$ operaciones, por lo que no afecta el orden de $O(n^3)$ flops.
+
+\section{Derivada de $f(\rho)$}
+
+La fórmula analítica de la derivada de $f(\rho)$ se puede obtener con cálculo multivariado. Para encontrarla, sea $V(\rho) \in {\rm I\!R}^{n \times p}$ una función diferenciable con respecto a $\rho$. Esta cumple la característica de ser una matriz ortogonal con columnas:
+
+\begin{equation*}
+	V(\rho) = (v_1(\rho) \enskip|\enskip v_2(\rho) \enskip|\enskip ... \enskip|\enskip v_p(\rho))
+\end{equation*}
+
+Antes de calcular la derivada de $f(\rho)$, es conveniente examinar la derivada de $V(\rho)^T V(\rho)$ con respecto a $\rho$. Sea $V(\rho)$ una matriz ortogonal; es decir, que cumpla $V^T(\rho) V(\rho) = I$, entonces \cite{ngo2012trace}:
+
+\begin{equation*}
+\frac{d}{d\rho} V(\rho)^T V(\rho) = \left(\frac{d}{d\rho}V(\rho)^T\right) V(\rho)  + V(\rho)^T 	\left( \frac{d}{d\rho} V(\rho) \right)
+\end{equation*}
+
+la derivada de $V(\rho)$ no se conoce explícitamente, pero se puede derivar componente a componente. De esta manera:
+
+
+\begin{equation*}
+\begin{aligned}
+V(\rho)^T V(\rho)  &= \left(\!
+    \begin{array}{cccc}
+      v_{11}(\rho) & v_{21}(\rho) & \hdots & v_{n1}(\rho) \\
+      v_{12}(\rho) & v_{22}(\rho) & \hdots & v_{n2}(\rho) \\
+      \vdots & \vdots & \vdots & \vdots \\
+      v_{1p}(\rho) & v_{2p}(\rho) & \hdots & v_{np}(\rho) 
+    \end{array}
+  \!\right)
+    \left(\!
+    \begin{array}{cccc}
+      v_{11}(\rho) & v_{12}(\rho) & \hdots & v_{1p}(\rho) \\
+      v_{21}(\rho) & v_{22}(\rho) & \hdots & v_{2p}(\rho) \\
+      \vdots & \vdots & \vdots & \vdots \\
+      v_{n1}(\rho) & v_{n2}(\rho) & \hdots & v_{np}(\rho) 
+    \end{array} 
+    \!\right) \\
+ &= \left(\!
+    \begin{array}{c}
+      v_{1}(\rho)^T \\
+      v_{2}(\rho)^T \\
+      \vdots \\
+      v_{p}(\rho)^T  
+    \end{array}
+  \!\right)
+  \left(\!
+    \begin{array}{cccc}
+      v_{1}(\rho) & v_{2}(\rho) & \hdots & v_{p}(\rho) 
+    \end{array} 
+	\!\right) 
+\end{aligned}
+\end{equation*}
+
+Entonces la entrada $(i,j)$ de $V(\rho)^T V(\rho)$ es:
+
+\begin{equation*}
+	[V(\rho)^T V(\rho)]_{ij} = v_i(\rho)^T v_j(\rho)
+\end{equation*}
+
+Calculando la derivada:
+
+\begin{equation*}
+\frac{d}{d\rho}[V(\rho)^T V(\rho)]_{ij} =  \left( \frac{d}{d\rho}v_i(\rho)^T \right)  v_j(\rho) + v_i(\rho)^T \left( \frac{d}{d\rho} v_j(\rho)\right) 
+\end{equation*}
+
+En específico para el caso $i = j$:
+
+\begin{equation}\label{eq:3.7}
+\frac{d}{d\rho}[V(\rho)^T V(\rho)]_{ii} =  2 \left( \frac{d}{d\rho}v_i(\rho)^T \right)  v_i(\rho)
+\end{equation}
+
+\bigskip
+
+\begin{lemma}\label{lemma:3.1}
+Sea $V(\rho) \in {\rm I\!R}^{n \times p}$ una matriz ortogonal y $\rho$ su parámetro. Entonces \cite{ngo2012trace}:
+\begin{equation*}
+\begin{aligned}
+(i)&  \quad \frac{d}{d\rho} V(\rho)^TV(\rho) = \left(\frac{d}{d\rho}V(\rho)^T\right) V(\rho)  + V(\rho)^T  \left( \frac{d}{d\rho} V(\rho) \right) = 0 \\
+(ii)& \quad Diag \left(\left(\frac{d}{d\rho}V^T \right)V(\rho) \right) = 0 
+\end{aligned}
+\end{equation*}
+\end{lemma}
+
+\begin{proof}
+\bigskip
+(i) Para demostrar la primer propiedad se hace uso de que $V(\rho)^T V(\rho) = I_p$, entonces:
+\begin{equation*}
+\frac{d}{d\rho} [V(\rho)^T V(\rho)] = 0  
+\end{equation*}
+
+(ii) Se parte de la ecuación \ref{eq:3.7}, y se usa el punto (i):
+\begin{equation*}
+  \frac{d}{d\rho} [V(\rho)^T V(\rho)]_{ii} =    2 \left( \frac{d}{d\rho}v_i(\rho)^T \right)  v_i(\rho) = 0
+\end{equation*}
+
+Como cada elemento $i$ es cero, entonces en particular $Diag\left( \left(\frac{d}{d\rho}V(\rho)^T \right) V(\rho) \right)=0 $.
+\end{proof}
+
+Del lema \ref{lemma:3.1} se tiene que $\left(\frac{d}{d\rho}V(\rho)^T \right) V(\rho)$ tiene diagonal igual a 0. Ahora, para derivar $f(\rho)$, primero se deriva la expresión $\frac{d}{d\rho}\left[V^T (A-\rho B)V \right]$:
+
+\begin{equation}\label{eq:3.8}
+\begin{aligned}
+	\frac{d}{d\rho}\left[V^T (A-\rho B)V \right] & = \frac{d}{d\rho} \left[V^T A V \right]- \frac{d}{d\rho}\left[V^T \rho B V\right] \\
+	& = \frac{dV^T}{d\rho}  AV +  V^T A \frac{dV}{d\rho} - \frac{dV^T}{d\rho} \rho BV - V^T \left[BV + \rho B \left(\frac{dV}{d\rho} \right) \right] \\
+	& = \frac{dV^T}{d\rho} \left[A -\rho B \right] V + V^T \left[A- \rho B \right]\frac{dV}{d\rho} - V^TBV \\
+\end{aligned} 
+\end{equation}
+
+
+Sea $V$ la matriz que diagonaliza $(A-\rho B)$, de manera que $V^T (A-\rho B) V = D$. Entonces \ref{eq:3.8}:
+\begin{equation}\label{eq:3.9}
+\begin{aligned}
+\frac{d}{d\rho}\left[V^T (A-\rho B)V \right] & = \frac{dV^T}{d\rho} VD  + DV^T\frac{dV}{d\rho} - V^TBV 
+\end{aligned}
+\end{equation}
+
+Al calcular la traza de \ref{eq:3.9} y usando del lema \ref{lemma:3.1}, se tiene que:
+\begin{equation}\label{eq:3.10}
+\begin{aligned}
+Tr\left[\frac{d}{d\rho} \left[V^T (A-\rho B)V \right]\right] & = Tr\left[ \frac{dV^T}{d\rho} VD + DV^T \frac{dV}{d\rho} - V^T B V  \right] \\
+											     & = 2 Tr \left[ D V^T \frac{dV}{d\rho} \right] - Tr \left[ V^T B V \right] \\
+											     & = -Tr\left[V^T B V \right] 
+\end{aligned}	
+\end{equation}
+
+\section{Método Newton-Lanczos}
+
+El método de Newton, establece que la iteración está dada por:
+
+\begin{equation*}
+x_{(n+1)} = x_{(n)} - \frac{f(x_n)}{f'(x_n)}
+\end{equation*}
+
+con $f'(x_n)$ la derivada de $f(x_n)$.
+
+Con esta fórmula y con \ref{eq:3.10}, se puede calcular explícitamente $\rho_{n+1}$ para la iteración de Lanczos \cite{ngo2012trace}:
+
+\begin{equation}\label{eq:3.11}
+\begin{aligned}
+\rho_{n+1} =& \rho_{n} - \frac{Tr\left[V^T (A-\rho_n B)V \right]}{-Tr\left[V^T B V \right]} \\
+           =& \frac{\rho_{n} Tr\left[V^T B V \right] +  Tr\left[V^T (A-\rho_n B)V \right]}{Tr\left[V^T B V \right]}\\
+           =& \frac{\rho_{n} Tr\left[V^T B V \right] +  Tr\left[V^T A V \right] - \rho_nTr\left[V^T BV \right]}{Tr\left[V^T B V \right]} \\
+           =&\frac{Tr\left[V^T A V \right]}{Tr\left[V^T B V \right]}
+\end{aligned} 
+\end{equation}
+
+Una vez calculado el paso de la iteración, se enuncia el método de Newton-Lanczos para maximizar el cociente de trazas. El método recibe como entrada la matriz $A$, $B$ y la dimensión a la cual se desea proyectar $p$ \cite{ngo2012trace}: 
+
+\begin{algorithm}[H]
+i = 1\;
+$\rho_1$ un número aleatorio\;
+$\rho_0$\;
+$f(\rho_1) = \sum\limits_{j = 1}^{p} \lambda_{(A-\rho_1 B)_j}$\;
+V = primeros $p$ eigenvectores de $A-\rho_1 B$\;
+$tol = 1e-10$\;
+
+\While{($i<50$ \quad , \quad $abs(\rho_i-\rho_{i-1}$)$>tol$)}{
+$i = i+1$\;
+V = primeros $p$ eigenvectores de $(A-\rho_i B)$ \;
+$\rho_i = Tr(V^T A V)/Tr(V^T BV)$\;
+$f(\rho_i) = \sum\limits_{j = 1}^{p} \lambda_{(A-\rho_i B)_j}$\;
+}
+ \caption{Algoritmo de Newton-Lanczos}
+\end{algorithm}
+
+
+\subsection{Condiciones necesarias de optimalidad}
+Considerando el problema de maximizar las trazas:
+
+\begin{equation}\label{eq:3.12}
+  \max_{\substack{V \in {\rm I\!R}^{n \times p} \\ V^TV = I}} \frac{Tr(V^T S_E V)}{Tr(V^T S_I V)} 
+\end{equation}
+
+La función lagrangiana asociada a este problema es la siguiente \cite{ngo2012trace}:
+
+\begin{equation*}
+L(V, \Gamma) =  \frac{Tr(V^T S_E V)}{Tr(V^T S_I V)} - Tr[\Gamma(V^TV-I)]
+\end{equation*}
+
+Con $\Gamma \in {\rm I\!R}^{p \times p}$ , la matriz de multiplicadores de Lagrange de la forma:
+
+\begin{equation*}
+\Gamma = \left(\!
+    \begin{array}{ccccc}
+    \gamma_{(1)(1)} & \gamma_{(1)(2)} & \hdots & \gamma_{(1)(p-1)} & \gamma_{(1)(p)} \\
+    \gamma_{(2)(1)} & \gamma_{(2)(2)} & \hdots & \gamma_{(2)(p-1)} & \gamma_{(2)(p)} \\
+    \vdots & \vdots & \vdots & \vdots & \vdots \\
+    \gamma_{(p-1)(1)} & \gamma_{(p-1)(2)} & \hdots & \gamma_{(p-1)(p-1)} & \gamma_{(p-1)(p)} \\
+    \gamma_{(p)(1)} & \gamma_{(p)(2)} & \hdots & \gamma_{(p)(p-1)} & \gamma_{(p)(p)} \\
+\end{array}
+  \!\right), \quad
+\end{equation*}
+
+
+Ya que al multiplicar esta matriz por $[V^T V- I]$ (con $V = (v_1 \enskip |\enskip v_2 \enskip |\enskip ... \enskip |\enskip v_{p-1} \enskip |\enskip v_p)$) se tiene que: 
+
+\begin{equation*}
+V^T V - I = \left(\!
+    \begin{array}{ccccc}
+    v_1^T v_1 -1& v_1^T v_2 & \hdots & v_1^T v_{p-1} & v_1^T v_p \\
+    v_2^T v_1 & v_2^T v_2 -1& \hdots & v_2^T v_{p-1} & v_2^T v_p \\
+    \vdots & \vdots & \vdots & \vdots & \vdots \\
+    v_{p-1}^T v_1 & v_{p-1}^T v_2 & \hdots & v_{p-1}^T v_{p-1} -1& v_{p-1}^Tv_p \\
+    v_p^T v_1 & v_p^T v_2 & \hdots & v_p^Tv_{p-1} & v_{p}^Tv_{p} -1 \\
+\end{array}
+  \!\right), \quad
+\end{equation*}
+
+entonces, la diagonal de ($\Gamma (V^T V - I)$) contiene $p$ elementos que son los siguientes: 
+
+\begin{equation*}
+\left(\!
+    \begin{array}{c}
+    \begin{aligned}
+    & \gamma_{(1)(1)}(v_1^T v_1 -1) &+& \gamma_{(1)(2)} (v_2^T v_1) &+& \hdots &+& \gamma_{(1)(p)}(v_p^T v_1) &\\
+    & \gamma_{(2)(1)}(v_1^T v_2) &+& \gamma_{(2)(2)}(v_2^T v_2 -1)  &+& \hdots &+& \gamma_{(2)(p)}(v_p^T v_2) &\\
+    & \vdots && \vdots && \vdots && \vdots &\\
+    &\gamma_{(p-1)(1)}(v_1^T v_{p-1}) &+& \gamma_{(p-1)(2)} (v_2^T v_{p-1}) &+& \hdots &+& \gamma_{(p-1)(p)}(v_p^T v_{p-1})&\\
+    &\gamma_{(p)(1)}(v_1^T v_{p}) &+& \gamma_{(p)(2)}(v_2^T v_p)  &+& \hdots &+& \gamma_{(p)(p)}(v_p^T v_{p}-1) &\\
+\end{aligned}
+\end{array}
+  \!\right), \quad
+\end{equation*}
+
+Para calcular la traza se suman estos elementos de la diagonal. De esta forma, se tienen p restricciones de la forma $v_i^T v_i = 1 \quad i = 1,...,p$ y $p(p-1)$ restricciones de la 
+forma $v_i^T v_j = 0 \quad i \neq j, \quad i,j = 1, ..., p$, cada una con su multiplicador lagrangiano.
+
+Como la ecuación a maximizar tiene un maximizador global $V^*$, entonces existe un multiplicador matricial lagrangiano tal que en el óptimo:
+
+\begin{equation}\label{eq:3.13}
+\frac{\partial \mathcal{L}(V^*, \Gamma^*)}{\partial V} =  0 \qquad con \qquad V^{T*}V^* = I
+\end{equation}
+
+Para encontrar $(V^*, \Gamma^*)$ de \ref{eq:3.13}, primero se debe conocer la derivada de $\frac{\partial Tr(V^T M V)}{\partial V}$, con M cualquier matriz:
+
+\begin{equation}\label{eq:3.14}
+\frac{\partial Tr(V^T M V)}{\partial V} = (M^* +M)V  
+\end{equation}
+
+Derivando el lagrangiano \ref{eq:3.13} y utilizando \ref{eq:3.14} se tiene que:
+
+\begin{equation*}
+\begin{aligned}
+\frac{\partial \mathcal{L}(V, \Gamma)}{\partial V} =&\quad  \left[\frac{\partial Tr(V^T A V) }{\partial V}\right]\left[Tr(V^T B V)^{-1}\right] \quad +& \\
+&\quad \left[Tr(V^T A V)\right]\left[\frac{\partial (Tr(V^T B V))^{-1} }{\partial V}\right] \quad -& \\
+&\quad \left[\frac{\partial Tr[\Gamma(V^TV-I)] }{\partial V}\right] \quad &
+\end{aligned}
+\end{equation*}
+
+\begin{equation*}
+\begin{aligned}
+\frac{\partial \mathcal{L}(V, \Gamma)}{\partial V} =&\quad  \left[2AV\right]\left[Tr(V^T B V)^{-1}\right] \quad +& \\
+&\quad \left[Tr(V^T A V)\right]\left[\frac{2BV}{Tr(V^T B V)^2}\right] \quad -& \\
+&\quad \left[V (\Gamma^* + \Gamma) \right] \quad &
+\end{aligned}
+\end{equation*}
+
+\begin{equation}\label{eq:3.15}
+\begin{aligned}
+\frac{\partial \mathcal{L}(V, \Gamma)}{\partial V} =&\quad  \left[\frac{2AV Tr(V^T B V)- 2BV Tr(V^T A V)}{(Tr(V^T B V))^2}\right] \quad +& \\
+&\quad \left[V (\Gamma^* + \Gamma) \right] \quad &
+\end{aligned}
+\end{equation}
+
+Igualando \ref{eq:3.15} a cero y acomodando la expresión, resulta:
+\begin{equation*}
+\left[A-\frac{Tr(V^{T*} A V^*)}{Tr(V^{T*} B V^*)}B\right] V^*  = \left[\frac{Tr(V^{T*} B V^*)}{2}V^* (\Gamma^{T*} + \Gamma^{*})\right]
+\end{equation*}
+
+\begin{equation}\label{eq:3.16}
+\left[ A-\rho^* B\right]V^*   = \left[ \frac{Tr(V^{T*} B V^*)}{2}V^* (\Gamma^{T*} + \Gamma^{*}) \right]
+\end{equation}
+
+Con $\rho^* = \frac{Tr(V^{T*} A V^*)}{Tr(V^{T*} B V^*)}$. Sea $Q$ la matriz ortogonal que diagonaliza $\Gamma^{T*} + \Gamma^{*}$, entonces se puede escribir la expresión $(\Gamma^{T*} + \Gamma^*)$ como:
+\begin{equation*}
+ \left(\Gamma^{T*} + \Gamma^{*}\right) = Q \Sigma^* Q^T \qquad con \qquad Q^TQ = I
+\end{equation*}
+
+Con $\Sigma^*$ una matriz diagonal. Multiplicando \ref{eq:3.16} por $V^{T*}$ y calculando la traza de ambos lados de la ecuación y se tiene que:
+
+\begin{equation*}
+\begin{aligned}
+Tr\left[ V^{T*}(A-\rho^* B)V^*\right]  =& \left[ \frac{Tr(V^{T*} B V^*)}{2}\right] Tr(\Gamma^{T*} + \Gamma^{*}) \\
+Tr(\Gamma^{T*} + \Gamma^{*}) =& 2 \frac{Tr(V^{T*}(A-\rho^*B)V^*)}{Tr(V^{T*}BV^*)} = 0
+\end{aligned}
+\end{equation*}
+
+
+
+
+
+\begin{equation}\label{eq:3.17}
+Tr(Q \Sigma^* Q^T) = 2 \frac{Tr(V^{T*}(A-\rho^*B)V^*)}{Tr(V^{T*}BV^*)} = 0
+\end{equation}
+
+
+Como $Tr(V^{T*}(A-\rho^*B)V^*) = 0$ entonces $Tr(Q \Sigma^* Q^T) =0$, por lo que $Tr(\Sigma^*) = 0$. Definiendo $U^* = V^*Q$, con $U^*U = I$, la expresión \ref{eq:3.16} se puede escribir como:
+
+\begin{equation*}
+\begin{aligned}
+\left[ A-\rho^* B\right]V^*   &= \left[ \frac{Tr(V^{T*} B V^*)}{2}V^* (Q \Sigma^* Q^T) \right] \\
+                              &= \left[ \frac{Tr(V^{T*} B V^*)}{2}U^*Q^{T*} (Q \Sigma^* Q^T) Q \right] \\
+                              &= \left[ \frac{Tr(V^{T*} B V^*)}{2}U^* \Sigma^* \right] \\
+\end{aligned}
+\end{equation*}  
+
+Definiendo $\Lambda_* = \frac{Tr(V^{T*} B V^*)}{2}\Sigma^*$, entonces:
+\begin{equation}\label{eq:3.18}
+\begin{aligned}
+\left[ A-\rho^* B\right]U^*   &= U^* \Lambda_* \\
+ U^{T*} \left(A-\rho^* B\right)U^*   &=  \Lambda_* \\
+ Tr(U^{T*} \left(A-\rho^* B\right)U^*)   &=  Tr(\Lambda_*) = 0
+\end{aligned}
+\end{equation}  
+
+De esta manera se tiene que la ecuación \ref{eq:3.18} es la condición necesaria para que $U^*, \rho^*$ sean las óptimas
+
+
+
+
+
+
+
+
+

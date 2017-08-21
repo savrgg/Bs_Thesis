@@ -1,0 +1,1029 @@
+\chapter{Apéndice B: Códigos en R}
+\label{ch:appendixB}
+
+\section{Experimentos numéricos}
+\subsection{$01\_Prueba20comp$}
+
+\begin{lstlisting}[language=R, basicstyle=\small]
+library(ProjectTemplate)
+reload.project()
+
+# Jaffe.20 & Mnist.20  are 5 element lists:
+# 1) iterative model
+# 2) data frame with \rho, f\rho values
+# 3) projection matrix V
+# 4) test error
+# 5) knn model
+
+Jaffe.20 <- prueba.20comp(JAFFE.train, JAFFE.test, "JAFFE")
+Mnist.20 <- prueba.20comp(MNIST.train, MNIST.test, "MNIST")
+
+Jaffe.20$modelo.iterativo
+Mnist.20$modelo.iterativo
+\end{lstlisting}
+
+\subsection{$02\_Models\_comparisons$}
+\begin{lstlisting}[language=R, basicstyle=\small]
+# 1) Data y proyeccion size --------------------------------
+library(ProjectTemplate)
+reload.project()
+
+numComp.Jaffe <- c(10,13,16,19,22,25,28,31,
+                   34,37,40,43,46,49) 
+numComp.Mnist <- c(2,5,10,15,20,40,60,80,
+                   100,120,140,160,180,193)
+
+comp.error.MNIST<-comparacion.modelos(train.p = MNIST.train,
+                                 test.p = MNIST.test, 
+                                 dataset = "MNIST", 
+                                 numComp = numComp.Mnist,
+                                 fortran = FALSE)
+
+comp.error.JAFFE<-comparacion.modelos(train.p = JAFFE.train,
+                                  test.p = JAFFE.test, 
+                                  dataset = "JAFFE", 
+                                  numComp = numComp.Jaffe,
+                                  fortran = FALSE)
+# 2) Graphs ------------------------------------------------
+
+graficar.comparacion(datos = comp.error.MNIST, 
+                     numComp = numComp.Mnist, 
+                     label = "MNIST")
+
+graficar.comparacion(datos = comp.error.JAFFE, 
+                     numComp = numComp.Jaffe, 
+                     label = "JAFFE")
+\end{lstlisting}
+
+\subsection{$03\_Profiling$}
+\begin{lstlisting}[language=R, basicstyle=\small]
+# 1) Data y proyeccion size --------------------------------
+library(ProjectTemplate)
+reload.project()
+
+# 1) Componentes ------------------------------------------
+numComp.Jaffe <- c(10,13,16,19,22,25,28,31,
+                   34,37,40,43,46,49) 
+numComp.Mnist <- c(2,5,10,15,20,40,60,80,
+                   100,120,140,160,180,193)
+# 2) Profiling ----------------------------------------
+prof.Mnist <- prolifiling.model(train.p = MNIST.train, 
+                                test.p = MNIST.test,
+                                dataset = "MNIST",
+                                numComp = numComp.Mnist)
+prof.Jaffe <- prolifiling.model(train.p = JAFFE.train, 
+                                test.p = JAFFE.test,
+                                dataset = "JAFFE",
+                                numComp = numComp.Jaffe)
+
+# 3) Graphs -------------------------------------------
+graficar.profiling(times.profiling = prof.Mnist, 
+                   numComp = numComp.Mnist, 
+                   dataset = "MNIST")
+graficar.profiling(times.profiling = prof.Jaffe, 
+                   numComp = numComp.Jaffe, 
+                   dataset = "JAFFE")
+\end{lstlisting}
+
+\section{Funciones}
+\subsection{$load\_libraries$}
+\begin{lstlisting}[language=R, basicstyle=\small]
+# 1) Load libraries ----------------------------------------
+set.seed(12345)
+library(plyr) # Tools for split, applying and combine data
+library(dplyr) # package of grammar of data manipulation
+library(tidyr) # package to efficiently "tidy" data
+library(FactoMineR) # Package for multivariate analysis
+library(ggplot2) # Graphing package "Grammar of Graphics"
+library(gridExtra) # Package to work with grid graphics
+library(class) # Functions for classification, including knn
+library(nnet) # Software for multinomial linear models
+library(MASS) # "Applied Statistics with S"
+
+
+
+# 1) Fisher eficiente ---------------------------------
+lda.iter.ef <- function (test.p, 
+                         train.p, 
+                         espacio.proy,
+                         prior = proportions,
+                         tol = 1e-10) {
+  
+  # Prepare matrix of data
+  x <- train.p %>% dplyr::select(-grupo)
+  x <- as.matrix(x)
+  
+  # Get dimensions
+  n <- nrow(x)
+  p <- ncol(x)
+  
+  # Get number of groups and the levels
+  g <- as.factor(train.p$grupo)
+  lev <- lev1 <- levels(g)
+  
+  # Get the number of images per class
+  counts <- as.vector(table(g))
+  proportions <- counts/n
+  ng <- length(proportions)
+  names(prior) <- names(counts) <- lev1
+  
+  # Group means and total mean
+  group.means <- tapply(c(x), list(rep(g, p), col(x)), mean)
+  all.means <- as.matrix(colMeans(x)) %>% t()
+  
+  # Scatter Matrices 
+  #Intra class
+  B <- t(x - group.means[g, ]) %*% (x - group.means[g, ]) 
+  # Between class
+  A <- (t(group.means)-matrix(rep(all.means,10),ncol=10))%*% 
+    diag(counts) %*% 
+    t(t(group.means)-matrix(rep(all.means,10),ncol=10)) 
+  
+  # Initialization
+  rhoAnt = -1000000
+  iter=1
+  dimension = espacio.proy
+  # rho = (cota.inf + cota.sup)/2
+  rho = 0
+  frho = sum(eigen(A-rho*B)$values[1:dimension])
+  V = eigen(A-rhoAnt*B)$vectors[,(1:dimension)]
+  
+  # list of results
+  a=list()
+  a[[1]] <- list(iter = 1, rho = rho, frho = frho, V = V) 
+  
+  # Iterative method (use of efficient irlba method)
+  while(iter < 50 & abs(rho-rhoAnt)>tol){
+    print(paste("iteracion: ",as.character(iter)))
+    rhoAnt = rho
+    iter=iter+1  
+    V = eigen(A-rhoAnt*B)$vectors[,(1:dimension)] # Lanczos
+    rho = sum(diag(t(V) %*% A %*% V)) /
+    sum(diag(t(V) %*% B %*% V))
+    frho = sum(eigen(A-rho*B)$values[1:dimension])
+    a[[iter]] <- list(iter = iter, rho = rho,
+                      frho = frho, V = V)
+  }
+  
+  # Getting the projection matrix
+  scaling <- V
+  dimnames(group.means)[[2L]] <- colnames(x)
+  cl <- match.call()
+  cl[[1L]] <- as.name("lda.iter")
+  structure(list(iteraciones = a, 
+                 prior = prior, 
+                 counts = counts, 
+                 means = group.means, 
+                 scaling = scaling, 
+                 lev = lev, 
+                 N = n, 
+                 call = cl, 
+                 class = "lda.iter"))
+}
+
+# 2) Fisher para pruebas ------------------------------
+lda.iter <- function (test.p, 
+                      train.p, 
+                      espacio.proy,
+                      prior = proportions, 
+                      tol = 1e-10) {
+  
+  # Prepare matrix of data
+  x <- train.p %>% dplyr::select(-grupo) %>% as.matrix()
+  
+  # Get dimensions
+  n <- nrow(x)
+  p <- ncol(x)
+  
+  # Get number of groups and the levels
+  g <- as.factor(train.p$grupo)
+  lev <- lev1 <- levels(g)
+  
+  # Get the number of images per class
+  counts <- as.vector(table(g))
+  proportions <- counts/n
+  ng <- length(proportions)
+  names(prior) <- names(counts) <- lev1
+  
+  # Group means and total mean
+  group.means <- tapply(c(x), list(rep(g, p), col(x)), mean)
+  all.means <- as.matrix(colMeans(x)) %>% t()
+  
+  # Scatter Matrices 
+  #Intra class
+  B <- t(x - group.means[g, ]) %*% (x - group.means[g, ]) 
+  # Between class
+  A <- (t(group.means)-matrix(rep(all.means,10),ncol=10))%*% 
+    diag(counts) %*% 
+    t(t(group.means)-matrix(rep(all.means,10),ncol=10)) 
+  
+  # [not run] Intra class + Between class = Total variance
+  diag(A+B) 
+  diag(49*(as.matrix(x) %>% cov))
+  
+  # [not run] EigenValues Time
+  (eigen(B))$values
+  (eigen(A))$values
+  
+  # [not run] Boundaries
+  cota.inf <- sum((eigen(A))$values[1:espacio.proy])/
+    sum((eigen(B))$values[1:espacio.proy])
+  cota.sup <- sum((eigen(A))$values[1:espacio.proy])/
+sum((eigen(B))$values[(dim(A)[1]+1-espacio.proy):dim(A)[1]])
+  
+  # Initialization
+  rhoAnt = -1000000
+  iter=1
+  dimension = espacio.proy
+  rho = (cota.inf + cota.sup)/2
+  
+  frho = sum(eigen(A-rho*B)$values[1:dimension])
+  V = eigen(A-rhoAnt*B)$vectors[,(1:dimension)]
+  
+  # list of results
+  a=list()
+  a[[1]] <- list(iter = 1, rho = rho, frho = frho, V = V) 
+  
+  # Iterative method (use of efficient irlba method)  
+  while(iter < 50 & abs(rho-rhoAnt)>tol){
+    print(paste("iteracion: ",as.character(iter)))
+    rhoAnt = rho
+    iter=iter+1  
+    V = eigen(A-rhoAnt*B)$vectors[,(1:dimension)]
+rho = sum(diag(t(V)%*%A %*% V)) /sum(diag(t(V) %*% B %*% V))
+    frho = sum(eigen(A-rho*B)$values[1:dimension])
+a[[iter]] <-list(iter = iter, rho = rho, frho = frho, V = V)
+  }
+  
+  # Getting the projection matrix
+  scaling <- V
+  dimnames(group.means)[[2L]] <- colnames(x)
+  cl <- match.call()
+  cl[[1L]] <- as.name("lda.iter")
+  structure(list(iteraciones = a, 
+                 prior = prior, 
+                 counts = counts, 
+                 means = group.means, 
+                 scaling = scaling, 
+                 lev = lev, 
+                 N = n, 
+                 call = cl, 
+                 cota.inf = cota.inf, 
+                 cota.sup = cota.sup, 
+                 class = "lda.iter"))
+}
+
+# 3) LDA original -------------------------------------
+lda.original <- function (x, 
+                          grouping, 
+                          prior = proportions, 
+                          tol = 1e-04, 
+                          nu = 5) {
+  
+  # Prepare matrix of data
+  x <- as.matrix(x)
+  n <- nrow(x)
+  
+  # Get dimensions
+  p <- ncol(x)
+  g <- as.factor(grouping)
+  
+  # Get number of groups and the levels
+  lev <- lev1 <- levels(g)
+  counts <- as.vector(table(g))
+  
+  # Get the number of images per class
+  proportions <- counts/n
+  ng <- length(proportions)
+  names(prior) <- names(counts) <- lev1
+  
+  # Group means 
+  group.means <- tapply(c(x), list(rep(g, p), col(x)), mean)
+  f1 <- sqrt(diag(var(x - group.means[g, ])))
+  scaling <- diag(1/f1, , p)
+  
+  # Calculate and project
+  fac <-  1/(n - ng)
+  X <- sqrt(fac) * (x - group.means[g, ]) %*% scaling
+  X.s <- svd(X, nu = 0L)
+  rank <- sum(X.s$d > tol)
+  scaling <- scaling %*% X.s$v[, 1L:rank] %*% 
+    diag(1/X.s$d[1L:rank], , rank)
+  xbar <- colSums(prior %*% group.means)
+  fac <-1/(ng - 1)
+  X <- sqrt((n * prior) * fac) * scale(group.means, 
+        center = xbar, scale = FALSE) %*% scaling
+  X.s <- svd(X, nu = 0L)
+  rank <- sum(X.s$d > tol * X.s$d[1L])
+  scaling <- scaling %*% X.s$v[, 1L:rank]
+  
+  # Export
+  dimnames(scaling) <- list(colnames(x), paste("LD",
+          1L:rank, sep = ""))
+  dimnames(group.means)[[2L]] <- colnames(x)
+  cl <- match.call()
+  cl[[1L]] <- as.name("lda")
+  structure(list(prior = prior, counts = counts, 
+                 means = group.means, 
+                 scaling = scaling, lev = lev, 
+                 svd = X.s$d[1L:rank], N = n, 
+                 call = cl), class = "lda")
+}
+
+# 4) Lanczos Fortran -----------------------------------
+# Give r0, A
+lanczos.iter <- function(A){
+  Dim = dim(A)[2]
+  r0 = matrix(rep(0,Dim), ncol = 1)
+  for(i in 1:Dim){
+    r0[i] = runif(1, 0, 1) 
+  }
+r0 = r0 / sqrt(sum(r0^2))
+r = list()
+b = list()
+a = list()
+q = list()
+
+q[[1]] = 0 # q0
+r[[1]] = r0 #r0
+b[[1]] = sqrt(sum(r[[1]]^2)) # b1
+q[[2]] = as.matrix(r[[1]]/b[[1]], ncol =D) #q1
+a[[1]] = t(q[[2]]) %*% A %*% q[[2]] #a1
+q[[1]]
+j <- 2
+q = cbind(q[[1]], q[[2]])
+while(b[[j-1]] > .0000001 | j < Dim+1){
+  z = A %*% q[,j]
+  z = z - q %*% (t(q) %*% z)
+  z = z - q %*% (t(q) %*% z)
+  b[[j]] = sqrt(sum(z^2))
+  q.temp = z/b[[j]]
+  q <- cbind(q, q.temp)
+  a[[j]] = t(q[,j+1]) %*% A %*% q[,j+1]
+  j = j+1
+  print(j)
+}
+
+dyn.load("/usr/lib/liblapack.dylib")
+
+Jobz <- as.character('V')#Get The eigenval and Eigenvector
+N <- as.integer(Dim)#Matrix Dimension
+D <- unlist(a)[1:Dim]#Diagonal
+E <- unlist(b)[2:(Dim)]#Upper (and lower) diagonal
+Z <- array(0.0,N*N)#storage for eigenvectors
+Ldz <- N#Leading dimension of Z (in our case number of rows)
+Work <- array(0.0,2*N)#Storage for processing
+info <- as.integer(0)#Info flag
+
+res<-.Fortran("dstev", Jobz, N, D, E, Z, Ldz, Work, info)
+
+evalues <- res[[3]]
+evectors <- matrix(res[[5]],N,N)
+list(evalues, evectors)
+}
+
+# 5) Fisher eficiente ---------------------------------
+lda.iter.fortran<- function (test.p = test.p, 
+                         train.p = train.p, 
+                         espacio.proy,
+                         prior = proportions,
+                         tol = 1e-10) {
+  
+  # Prepare matrix of data
+  x <- train.p %>% dplyr::select(-grupo)
+  x <- as.matrix(x)
+  
+  # Get dimensions
+  n <- nrow(x)
+  p <- ncol(x)
+  
+  # Get number of groups and the levels
+  g <- as.factor(train.p$grupo)
+  lev <- lev1 <- levels(g)
+  
+  # Get the number of images per class
+  counts <- as.vector(table(g))
+  proportions <- counts/n
+  ng <- length(proportions)
+  names(prior) <- names(counts) <- lev1
+  
+  # Group means and total mean
+  group.means <- tapply(c(x), list(rep(g, p), col(x)), mean)
+  all.means <- as.matrix(colMeans(x)) %>% t()
+  
+  # Scatter Matrices 
+  #Intra class
+  B <- t(x - group.means[g, ]) %*% (x - group.means[g, ]) 
+  # Between class
+  A <- (t(group.means)-matrix(rep(all.means,10),ncol=10))%*% 
+    diag(counts) %*% 
+    t(t(group.means)-matrix(rep(all.means,10),ncol=10)) 
+  
+  # Initialization
+  rhoAnt = -1000000
+  iter=1
+  dimension = espacio.proy
+  # rho = (cota.inf + cota.sup)/2
+  rho = 0
+  frho = sum(eigen(A-rho*B)$values[1:dimension])
+  V = eigen(A-rhoAnt*B)$vectors[,(1:dimension)]
+  
+  # list of results
+  a=list()
+  a[[1]] <- list(iter = 1, rho = rho, frho = frho, V = V) 
+  
+  # Iterative method (use of efficient irlba method)
+  while(iter < 50 & abs(rho-rhoAnt)>tol){
+    print(paste("iteracion: ",as.character(iter)))
+    rhoAnt = rho
+    iter=iter+1  
+    
+  V = lanczos.iter(A-rhoAnt*B)[[2]][,(1:dimension)]#Lanczos
+    rho = sum(diag(t(V) %*% A %*% V)) /
+      sum(diag(t(V) %*% B %*% V))
+    frho = sum(lanczos.iter(A-rhoAnt*B)[[1]][1:dimension])
+    a[[iter]] <- list(iter = iter, rho = rho,
+                      frho = frho, V = V)
+  }
+  
+  # Getting the projection matrix
+  scaling <- V
+  dimnames(group.means)[[2L]] <- colnames(x)
+  cl <- match.call()
+  cl[[1L]] <- as.name("lda.iter")
+  structure(list(iteraciones = a, 
+                 prior = prior, 
+                 counts = counts, 
+                 means = group.means, 
+                 scaling = scaling, 
+                 lev = lev, 
+                 N = n, 
+                 call = cl, 
+                 class = "lda.iter"))
+}
+\end{lstlisting}
+
+\subsection{$functions\_comparison$}
+\begin{lstlisting}[language=R, basicstyle=\small]
+comparacion.modelos <- function(train.p, test.p, 
+                                dataset,numComp, 
+                                fortran = FALSE){
+  # lda iterativo
+  print(paste("===Corriendo el modelo con la base",dataset))
+  
+  lda.iter <- sapply(1:14, function(x){
+    print(paste("Iteracion con: ", 
+                numComp[x], 
+                " componentes."))
+    
+    # Run model with different number of components
+    if(fortran == FALSE){
+    modelo.iterativo <- lda.iter.ef(train.p = train.p, 
+                                    test.p = test.p, 
+                                  espacio.proy = numComp[x])
+    }else{
+      modelo.iterativo <- lda.iter.fortran(train.p = train.p, 
+                                      test.p = test.p, 
+                                  espacio.proy = numComp[x])
+    }
+    # Data.frame with information of  (\rho and f(\rho))
+    iter <- sapply(1:length(modelo.iterativo$iteraciones), 
+                   function(x){
+          data.frame(modelo.iterativo$iteraciones[[x]]$rho,
+                  modelo.iterativo$iteraciones[[x]]$frho)%>% 
+                setNames(c("rho", "frho")) %>% data.frame()
+                   }) %>% t() %>% data.frame() %>% 
+      mutate(iter = 1:nrow(.), 
+             rho = unlist(rho),
+             frho = unlist(frho))
+    iter <- iter %>% data.frame() %>% 
+      dplyr::mutate(frho2 = c(iter$frho[2:nrow(.)],NA ),
+                    rho2 = c(iter$rho[2:nrow(.)], NA))
+    
+    # Projected data into a 20-dimensional space
+    V <- modelo.iterativo$iteraciones[[
+      length(modelo.iterativo$iteraciones)]]$V
+    
+    train.proyectados <- data.frame(as.matrix(train.p %>% 
+                          dplyr::select(-grupo)) %*% V) %>%
+      mutate(grupo = train.p$grupo)
+    
+    test.proyectados <- data.frame(as.matrix(test.p %>% 
+                          dplyr::select(-grupo)) %*% V) %>%
+      mutate(grupo = test.p$grupo)
+    
+    # K-nn model
+    
+    print("Iniciando modelo knn")
+  modelo <- knn(train = train.proyectados[,c(1:numComp[x])], 
+                test = test.proyectados[, c(1:numComp[x])], 
+                  cl = train.proyectados$grupo, k = 3)
+    pred <- data.frame(original = test.proyectados$grupo, 
+                       predicho = modelo)
+    
+    pred <- pred %>% mutate(verdad = original != predicho)
+    sum(pred$verdad)/nrow(pred)
+  })
+  
+  modelo.logistico <- lapply(1:14, function(x){
+    modelo <- multinom(grupo~., 
+          data = train.p[,c(1:numComp[x], dim(train.p)[2])],
+                       MaxNWts = 10000)
+    predichos <- predict(modelo, 
+                         newdata = test.p[,c(1:numComp[x])])
+    pred <- data.frame(original = test.p$grupo, 
+                       predicho = predichos)
+    pred <- pred %>% mutate(verdad = original != predicho)
+    sum(pred$verdad)/nrow(pred)
+  })
+  
+  lda.original <- lapply(1:14, function(x){
+    modelo<- lda(grupo ~ ., 
+                 train.p[,c(1:numComp[x], 
+                            dim(train.p)[2])], 
+                 prior = c(1,1,1,1,1,1,1,1,1,1)/10)
+  predichos <- predict(modelo, test.p[,1:numComp[x]])$class
+    pred <- data.frame(original = test.p$grupo, 
+                       predicho = predichos)
+    pred <- pred %>% mutate(verdad = original != predicho)
+    sum(pred$verdad)/nrow(pred)
+  })
+  
+  data.frame(lda.iter = unlist(lda.iter), 
+             logistico = unlist(modelo.logistico), 
+             lda.original = unlist(lda.original))
+}
+
+graficar.comparacion <- function(datos, numComp, label){
+  plot1 <- datos %>% 
+    #write.table(sep = ';', pipe('pbcopy'), row.names= F)
+    mutate(numComp = numComp) %>% 
+    gather(variable, value, lda.iter:lda.original) %>% 
+    ggplot(aes(x = numComp , y = 1-value, 
+      group = factor(variable), color = factor(variable))) +
+    geom_point() + geom_line()+
+    labs(title = "Tasa de reconocimiento conforme 
+         numero el espacio de proyeccion", 
+         x = "numero de entrenamiento por grupo", 
+         y="tasa reconocimiento")
+  
+  png(filename =paste(getwd(), "/graphs/Chapter4_comp_", 
+        label, ".png", sep =""), width = 600,  height = 400)
+  grid.arrange(plot1, ncol =1)
+  dev.off()
+}
+\end{lstlisting}
+
+\subsection{$functions\_prueba20comp$}
+\begin{lstlisting}[language=R, basicstyle=\small]
+# funciones prueba 20 componentes
+
+plot.comp <- function(V1, label, train.p, test.p){
+  train.proyectados <- data.frame(as.matrix(train.p %>% 
+                          dplyr::select(-grupo)) %*% V1) %>%
+    mutate(grupo = train.p$grupo)
+  
+  test.proyectados <- data.frame(as.matrix(test.p %>% 
+                          dplyr::select(-grupo)) %*% V1) %>%
+    mutate(grupo = test.p$grupo)
+  
+  a1 = ggplot(train.proyectados) + 
+    geom_point(aes(x=X1, y=X2, 
+                   group = grupo, color = grupo), 
+               size=5, alpha = .2) + 
+    geom_point(aes(x=X1, y=X2, 
+                   group = grupo, color = grupo))+ 
+    labs(title = label)
+  a2 = ggplot(train.proyectados) + 
+    geom_point(aes(x=X3, y=X4, 
+                   group = grupo, color = grupo), 
+               size=5, alpha = .2) + 
+    geom_point(aes(x=X3, y=X4, 
+                   group = grupo, color = grupo))+ 
+    labs(title = label)
+  list(a1,a2)
+}
+plot.ult <- function(V1, label, train.p, test.p){
+  train.proyectados <- data.frame(as.matrix(train.p %>% 
+                          dplyr::select(-grupo)) %*% V1) %>%
+    mutate(grupo = train.p$grupo)
+  
+  test.proyectados <- data.frame(as.matrix(test.p %>% 
+                          dplyr::select(-grupo)) %*% V1) %>%
+    mutate(grupo = test.p$grupo)
+  a7 =  ggplot(train.proyectados) + 
+    geom_point(aes(x=X17, y=X18, 
+                   group = grupo, color = grupo), 
+               size=5, alpha = .2) + 
+    geom_point(aes(x=X17, y=X18, 
+                   group = grupo, color = grupo))+ 
+    labs(title = label)
+  
+  a8 =  ggplot(train.proyectados) + 
+    geom_point(aes(x=X19, y=X20, 
+                   group = grupo, color = grupo), 
+               size=5, alpha = .2) + 
+    geom_point(aes(x=X19, y=X20, 
+                   group = grupo, color = grupo))+ 
+    labs(title = label)
+  list(a7,a8)
+}
+prueba.20comp <- function(train.p, test.p, dataset){
+  # Iterative LDA, projected to a 20-dimentional space
+  modelo.iterativo <- lda.iter(train.p = train.p, 
+                               test.p = test.p,
+                               espacio.proy = 20)
+  # Data.frame with information of (\rho and f(\rho))
+  iter <- sapply(1:length(modelo.iterativo$iteraciones), 
+                 function(x){
+          data.frame(modelo.iterativo$iteraciones[[x]]$rho,
+                modelo.iterativo$iteraciones[[x]]$frho)  %>% 
+                     setNames(c("rho", 
+                            "frho")) %>% data.frame()}) %>% 
+    t() %>% data.frame() %>% 
+    mutate(iter = 1:nrow(.), 
+           rho = unlist(rho),
+           frho = unlist(frho))
+  iter <- iter %>% 
+    dplyr::mutate(frho2 = c(iter$frho[2:nrow(.)],NA),
+                  rho2 = c(iter$rho[2:nrow(.)], NA))
+  
+  # f(\rho) graph. It contains the iterations of the algorit
+  plot <- iter %>% ggplot() +
+    geom_point(aes(x = rho, y = frho))  + 
+    geom_segment(aes(x = rho, y = frho, 
+                     xend = rho, yend = frho2), 
+                 color = "gray50") +
+    geom_segment(aes(x = rho, y = frho2, 
+                     xend = rho2, yend = frho2), 
+                 arrow = arrow(length = unit(.3, "cm")), 
+                 size = 1, 
+                 color = "gray50") +
+    labs(title = paste("Valor de la funcion f(rho) con 
+      respecto al numero de iteraciones ", dataset,sep =""), 
+         ylab = "f(rho)",
+         xlab = "rho")
+  # Save the image into a *.png file
+  png(paste(getwd(), "/graphs/Chapter4_iteraciones_", 
+      dataset, ".png", sep =""),width = 500, height = 500)
+  grid.arrange(plot, ncol = 1)
+  dev.off()
+  
+  # Projected data into a 20-dimensional space
+  V <- modelo.iterativo$iteraciones[[
+    length(modelo.iterativo$iteraciones)]]$V
+  
+  r1 <- 1
+  r2 <- round(length(modelo.iterativo$iteraciones)/3*1)
+  r3 <- round(length(modelo.iterativo$iteraciones))
+  
+  # iteration1
+  V1 <- modelo.iterativo$iteraciones[[r1]]$V
+  plot1 <- plot.comp(V1, paste("Iteracion ",r1, sep=""),
+                     train.p, test.p)
+  
+  # iteracion3
+  V2 <- modelo.iterativo$iteraciones[[r2]]$V
+  plot2 <- plot.comp(V2, paste("Iteracion ",r2, sep=""),
+                     train.p, test.p)
+  
+  # iteracion9
+  V3 <- modelo.iterativo$iteraciones[[r3]]$V
+  plot3 <- plot.comp(V3, paste("Iteracion ",r3, sep=""),
+                     train.p, test.p)
+  
+  png(paste(getwd(),"/graphs/Chapter4_ejemplo20componentes_",
+        dataset, ".png", sep =""),width = 700, height = 800)
+  grid.arrange(plot1[[1]],plot1[[2]],plot2[[1]],
+               plot2[[2]],plot3[[1]],plot3[[2]], 
+               ncol = 2)
+  dev.off()
+  
+  # last components
+  V4 <- modelo.iterativo$iteraciones[[r3]]$V
+  plot4 <- plot.ult(V4, "Ultimas componentes", 
+                    train.p, test.p)
+  png(paste(getwd(),"/graphs/Chapter4_ultimasComponentes_",
+        dataset, ".png", sep =""),height = 400, width = 700)
+  grid.arrange(plot4[[1]],plot4[[2]], ncol = 2)
+  dev.off()
+  # knn model ---------------------------------------------
+  V <- modelo.iterativo$iteraciones[[
+    length(modelo.iterativo$iteraciones)]]$V
+  
+  train.proyectados <- data.frame(as.matrix(train.p %>% 
+                          dplyr::select(-grupo)) %*% V) %>%
+    mutate(grupo = train.p$grupo)
+  
+  test.proyectados <- data.frame(as.matrix(test.p %>% 
+                          dplyr::select(-grupo)) %*% V) %>%
+    mutate(grupo = test.p$grupo)
+  
+  train.proyectados %>% head
+  knn.model <- knn(train = train.proyectados[,c(1:20)], 
+                   test = test.proyectados[, c(1:20)], 
+                   cl = train.proyectados$grupo, k = 3)
+  
+  pp <- data.frame(original = test.proyectados$grupo, 
+                   predicho = knn.model)
+  
+  pp <- pp %>% mutate(verdad = original != predicho)
+  
+  error <- sum(pp$verdad)/nrow(pp)
+  list(modelo.iterativo=modelo.iterativo,iter = iter, V = V, 
+       error = error, knn.model = knn.model)
+}
+\end{lstlisting}
+
+\subsection{$functions\_profiling$}
+\begin{lstlisting}[language=R, basicstyle=\small]
+prolifiling.model <- function(train.p, test.p, 
+                                dataset,numComp){
+
+print(paste("====Realizando profiling de la base",dataset))
+lda.time <- lapply(1:14, function(x){
+  print(paste("Iteracion con: ", 
+              numComp[x], " componentes."))
+  
+  lda.iter <- sapply(1:5, function(y){
+    system.time(modelo.iterativo <- 
+                  lda.iter.ef(train.p = train.p, 
+                              test.p = test.p, 
+                              espacio.proy = numComp[x]))
+  }) %>% data.frame() %>% t() %>% data.frame() %>% 
+    dplyr::select(elapsed) %>% 
+    dplyr::summarise(mean = mean(elapsed))
+  
+  logistico <- sapply(1:5, function(y){
+    system.time(modelo <- multinom(grupo~., 
+          data = train.p[,c(1:numComp[x], dim(train.p)[2])], 
+                                   MaxNWts = 10000))
+  }) %>% data.frame() %>% t() %>% data.frame() %>% 
+    dplyr::select(elapsed) %>% 
+    dplyr::summarise(mean = mean(elapsed))
+  
+  lda.original <- sapply(1:5, function(y){
+    system.time(modelo <- lda(grupo ~ .,
+                train.p[,c(1:numComp[x], dim(train.p)[2])], 
+                        prior = c(1,1,1,1,1,1,1,1,1,1)/10))
+  })  %>% data.frame() %>% t() %>% data.frame() %>% 
+    dplyr::select(elapsed) %>% 
+    dplyr::summarise(mean = mean(elapsed))
+  
+  list(lda.iter, logistico, lda.original)
+})
+
+data.frame(unlist(lda.time)) %>% 
+  mutate(var = rep(c("lda.iter", "logis", "lda.orig"), 14),
+         ID = rep(1:(nrow(.)/3), each = 3)) %>% 
+  setNames(c("time", "var", "ID")) %>% 
+  spread(var, time)
+}
+
+
+graficar.profiling <- function(times.profiling, numComp,
+                               dataset){
+plot1 <- times.profiling %>% 
+  mutate(numComp = numComp) %>% 
+  gather(variable, value, lda.iter:logis) %>% 
+  ggplot(aes(x = numComp , y = value,
+             group = variable, color = variable)) +
+  geom_point() + geom_line()+
+  labs(title = "Tiempo de los modelos", 
+       x = "Espacio de proyeccion", 
+       y="Tiempo en (s)")
+png(filename = paste(getwd(), "/graphs/Chapter4_profiling", 
+      dataset, ".png", sep =""), width = 600, height = 400)
+grid.arrange(plot1, ncol = 1)
+dev.off()
+}
+\end{lstlisting}
+
+\section{Preprocesamiento}
+
+\subsection{$MNIST\_munge$}
+\begin{lstlisting}[language=R, basicstyle=\small]
+# 1) Load libraries ----------------------------------------
+set.seed(12345)
+library(plyr) # Tools for split, applying and combine data
+library(dplyr) # package of grammar of data manipulation
+library(tidyr) # package to efficiently "tidy" data
+library(FactoMineR) # Package for multivariate analysis
+library(ggplot2) # Graphing package "Grammar of Graphics"
+library(gridExtra) # Package to work with grid graphics
+
+# 1) Generate train and test from MNIST (run once) ---------
+# darch::readMNIST("data/MNIST/")
+
+# 2) Read MNIST data ---------------------------------------
+# Original datasets
+load("data/MNIST/train.RData")
+load("data/MNIST/test.RData")
+
+# Matrix with images in the rows and the variable in columns
+numeros.ind.pix = rbind(data.frame(trainData, 
+                  grupo = factor(apply(trainLabels[,], 1,  
+                      function(x){ which(x == 1)-1 }))),
+                  data.frame(testData, 
+                      grupo = factor(apply(testLabels[,], 1,  
+                      function(x){ which(x == 1)-1 })))) %>% 
+  mutate(ID = 1:nrow(.))
+base.mnist <- numeros.ind.pix
+cache("base.mnist")
+rm(testData, testLabels, trainData, trainLabels)
+
+# 3) Train and test sets -----------------------------------
+# Size of images per class
+n.train <- 400
+
+# Sample $n.train$ imager per class
+train.id <- numeros.ind.pix %>% 
+  group_by(grupo) %>% 
+  sample_n(n.train) %>% 
+  data.frame()
+
+# Train and Test data.frames                    
+train <- numeros.ind.pix[train.id$ID, ]
+test <- numeros.ind.pix[-train.id$ID, ]
+
+# Percentaje of images in train dataset
+nrow(train)/(nrow(train)+nrow(test))
+
+# 4) PCA ---------------------------------------------------
+# PCA of MNIST dataset (each row is an image)
+# 193 colums contains ~95% of the total variance
+system.time(pca.train <- PCA(train %>% 
+                               dplyr::select(-grupo, -ID), 
+                             graph = F,
+                             scale.unit = F,
+                             ncp = 193))
+
+# Matrix of loadings: 784 rows, 193 columns 
+loadings <- sweep(pca.train$var$coord,2,  # 784 x 193
+        sqrt(pca.train$eig[1:ncol(pca.train$var$coord),1]),
+        FUN="/")
+
+# Principal components 
+train.p <- pca.train$ind$coord %>% data.frame() %>% 
+  dplyr::mutate(grupo = train$grupo)
+
+# [Revision] reconstuyendo primer componente 
+as.matrix(scale(train %>% dplyr::select(-grupo, -ID), 
+                center = apply(train %>% 
+                      dplyr::select(-grupo, -ID), 2,mean), 
+                scale = F)) %*% loadings[,1] %>% head
+
+pca.train$ind$coord[,1] %>% head
+
+# Projection of the test dataset with the train loadings 
+# (centered with mean of train dataset)
+system.time(test.p <- as.matrix(scale(test %>% 
+            dplyr::select(-grupo, -ID), # 69,000 x 193
+                                      
+            center = apply(train %>% # centers of train
+                    dplyr::select(-grupo, -ID), 2,mean), 
+                          scale = F)) %*% loadings %>% 
+              data.frame() %>% 
+              mutate(grupo = test$grupo))
+dim(test.p)
+dim(train.p)
+MNIST.test <- test.p
+MNIST.train <- train.p
+cache("MNIST.test")
+cache("MNIST.train")
+\end{lstlisting}
+
+\subsection{$JAFFE\_munge$}
+\begin{lstlisting}[language=R, basicstyle=\small]
+# 1) Load libraries ----------------------------------------
+set.seed(12345)
+library(tiff) # package that reads *.tiff images 
+library(tidyr) # package to efficiently "tidy" data
+library(dplyr) # package of grammar of data manipulation
+library(ProjectTemplate) # Template data analysis project
+library(FactoMineR) # Package for multivariate analysis
+
+# 2) Read databases ----------------------------------------
+# Get the names of the files
+files <- (Sys.glob("data/Jaffe/*.tiff"))
+
+# Create an array that contains all the images paths 
+nombres.personas <- apply(as.matrix(files),1,function(x){
+  gsub("data/Jaffe/","",x)  
+})
+
+# Data.frame with info about each image (ID, name, class)
+guia.personas.df <- data.frame(nombres.personas,
+                               nombres.personas) %>%
+  separate(nombres.personas.1, c("persona", 
+                                 "postura", 
+                                 "ID", 
+                                 "extension")) %>%
+  dplyr::select(-extension,
+                -ID) %>%
+  mutate(ID = 1:213, 
+         nombres.personas = as.character(nombres.personas),
+         persona = factor(persona),
+         postura = factor(postura))
+
+# List of length 213 that contains an image in each element
+lista.completa.imagenes <- lapply(files, function(x){  
+  imagen <- readTIFF(x)
+  if(length(dim(imagen)) == 3){
+    matrix <- as.vector(imagen[,,1])
+  }else{
+    matrix <- as.vector(imagen)
+  }
+})
+
+# Data.frame, each column is an image
+base.imagenes <- data.frame(lista.completa.imagenes)
+names(base.imagenes) <- guia.personas.df$nombres.personas
+
+# 2 matrices: In base.pix.ind.1, the columns are the images
+#             In base.ind.pix.1, the rows are the images            
+base.pix.ind.1 <- data.frame(base.imagenes)
+base.ind.pix.1 <- data.frame(t(base.imagenes)) %>% 
+  mutate(grupo = names(base.imagenes)) %>% 
+  separate(grupo, c("grupo", 
+                    "postura", 
+                    "ID", 
+                    "extension")) %>% 
+  dplyr::select(-postura, 
+                -ID, 
+                -extension) %>% 
+  mutate(ID = 1:nrow(.))
+
+# 3) Explorar bases de datos -------------------------------
+# sizes of the matrices
+dim(base.pix.ind.1) # 65,536 rows and 213 columns
+dim(base.ind.pix.1) # 213 rows and 65,536 columns
+
+# save in cache the data.base
+base.jaffe <- base.ind.pix.1
+cache("base.jaffe")
+
+# 4) Train and test  ---------------------------------------
+# Size of images per class
+n.train <- 5
+
+# Sample $n.train$ imager per class
+train.id <- base.jaffe %>% 
+  group_by(grupo) %>% 
+  sample_n(n.train) %>% 
+  data.frame()
+
+# Train and Test data.frames
+train <- base.jaffe[train.id$ID, ]
+test <- base.jaffe[-train.id$ID, ]
+
+# Percentaje of images in train dataset
+nrow(train)/(nrow(train)+nrow(test))
+
+# 5) PCA ---------------------------------------------------
+
+# PCA of JAFFE dataset (each row is an image)
+# 52 colums contains ~95% of the total variance
+system.time(pca.train <- PCA(train %>% 
+                               dplyr::select(-grupo, -ID), 
+                             graph = F,
+                             scale.unit = F,
+                             ncp = 49)) 
+
+# Matrix of loadings: 65,536 rows, 49 columns
+loadings <- sweep(pca.train$var$coord,2,
+        sqrt(pca.train$eig[1:ncol(pca.train$var$coord),1]),
+        FUN="/")
+
+# Principal components 
+train.p <- pca.train$ind$coord %>% data.frame() %>% 
+  dplyr::mutate(grupo = train$grupo)
+
+# [Revision] Reconstuyendo primer componente 
+as.matrix(scale(train %>% dplyr::select(-grupo, -ID), 
+                center = apply(train %>%
+                        dplyr::select(-grupo, -ID), 2,mean), 
+                scale = F)) %*% loadings[,1] %>% head
+
+pca.train$ind$coord[,1] %>% head
+
+# Projection of the test dataset with the train loadings 
+# (centered with mean of train dataset)
+system.time(test.p <- as.matrix(scale(test %>% 
+                    dplyr::select(-grupo, -ID), 
+                    center = apply(train %>% 
+                       dplyr::select(-grupo, -ID), 2,mean), 
+                    scale = F)) %*% loadings %>% 
+              data.frame() %>% 
+              mutate(grupo = test$grupo))
+
+JAFFE.test <- test.p
+JAFFE.train <- train.p
+cache("JAFFE.test")
+cache("JAFFE.train")
+
+rm(list = ls())
+\end{lstlisting}
+
+
+

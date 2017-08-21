@@ -1,0 +1,129 @@
+\documentclass{tesisITAM}
+\usepackage[utf8]{inputenc}
+\usepackage{graphics}
+\usepackage{amsfonts}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{booktabs}
+\usepackage[]{algorithm2e}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{mathtools}
+\setlength{\headheight}{13.08pt}
+
+
+\newtheorem{lemma}{Lema}[chapter]
+\newtheorem{proposition}{Proposición}[chapter]
+\newtheorem{theorem}{Teorema}[chapter]
+\newtheorem{definition}{Definición}[chapter]
+\newtheorem{corollary}{Corolario}[chapter]
+\newtheorem{example}{Ejemplo}[chapter]
+\newtheorem{remark}{Observación}[chapter]
+\DeclareMathOperator{\Tr}{Tr}
+\DeclarePairedDelimiter{\norm}{\lVert}{\rVert}
+\newcommand{\vectorproj}[2][]{\textit{proj}_{\vect{#1}}\vect{#2}}
+\newcommand{\vect}{\mathbf}
+
+
+
+\title{OPTIMIZACIÓN DEL COCIENTE DE LA TRAZA PARA MÁQUINAS DE APRENDIZAJE}
+\author{SALVADOR GARCÍA GONZÁLEZ}
+\degree{LICENCIADO EN ACTUARÍA}
+\advisor{DR. ZEFERINO PARADA GARCÍA}
+\year{2016}
+
+
+
+\begin{document}
+	\pagenumbering{gobble}
+	\maketitle
+	\publicationrights 
+
+	% ABSTRACT
+	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+	%\begin{abstract}{spanish}
+	%Esta tesis trata de...
+	%\end{abstract}
+
+	%\begin{abstract}{english}
+	%Esta tesis trata de ...
+	%\end{abstract}
+
+
+	\selectlanguage{spanish}
+	\setcounter{page}{1}
+	\pagenumbering{roman}
+	\addcontentsline{toc}{chapter}{Prólogo} %Añadimos Prólogo
+
+	 \tableofcontents
+	 \listoffigures
+    % \listoftables
+	\newpage
+
+	\pagenumbering{arabic}
+	\setcounter{page}{1}
+
+	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	% VERSION MATEMATICAS
+	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+	%  \include{Chapters/introduction}
+	%  %\include{Chapters/Capitulo1} 
+	%  \include{Chapters/Capitulo2}
+	%  \include{Chapters/Capitulo3}
+	%  \include{Chapters/Capitulo4}
+	%  \include{Chapters/conclusions}
+		
+	% \appendix
+	%  \include{Chapters/appendixA}
+	% \include{Chapters/appendixB}
+
+	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	% VERSION ACTUARIA
+	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	
+	\include{dedicatoria}
+	\pagenumbering{arabic} 
+	\include{agradecimientos}
+ 	\include{Chapters3/introduction}
+	%\include{Chapters3/Capitulo1} 
+	\include{Chapters3/Capitulo2}
+	\include{Chapters3/Capitulo3}
+	\include{Chapters3/Capitulo4}
+	\include{Chapters3/conclusions}
+		
+	\appendix
+	 \include{Chapters3/appendixA}
+	% \include{Chapters3/appendixB}
+	
+
+
+
+	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	% VERSION ANTIGUA
+	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+ % 	\include{Chapters2/introduction}
+	%   \include{Chapters2/Capitulo1} 
+	%   \include{Chapters2/Capitulo2}
+	%   \include{Chapters2/Capitulo3}
+	%   \include{Chapters2/Capitulo4}
+	%  \include{Chapters2/conclusions}
+		
+	% \appendix
+	%  \include{Chapters2/appendixA}
+	%  \include{Chapters2/appendixB}
+	
+	 
+
+	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	% BIBLIOGRAPHY
+	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	\clearpage
+	\addcontentsline{toc}{chapter}{Bibliografía} %Añadimos la bibliografia a la lista de contenidos.
+	\bibliographystyle{plain}
+	\bibliography{bibliography}
+\end{document}
+
+
+

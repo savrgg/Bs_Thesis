@@ -1,0 +1,29 @@
+\chapter*{Prólogo}	
+\label{ch:prologo} 
+
+%\begin{chapterquote}{Leslie Lamport}
+%	Formal mathematics is nature's way of letting you %know how sloppy
+%your mathematics is.
+%\end{chapterquote}
+
+El Análisis Discriminante Lineal de Fisher (ADLF) es un método estadístico utilizado comúnmente con el fin de reducir la dimensionalidad de un conjunto de datos como paso preliminar para resolver un problema de clasificación. La reducción dimensional realizada por este método es especial, ya que su objetivo final es separar dos o más clases de individuos en un nuevo espacio. El método para dos clases fue desarrollado por Ronald A. Fisher (1936), aunque después fue generalizado por C. R. Rao (1948).
+
+El ADLF es empleado como un método de aprendizaje de máquina, en particular en problemas de reconocimiento de patrones. Puede ser aplicado a diversas áreas; desde la medicina, en reconocimiento de tumores cancerígenos, hasta en finanzas, 
+para la identificación de individuos con alta probabilidad de caer en incumplimiento de pago.
+
+El planteamiento del problema de optimización del ADLF consiste en lo siguiente: dado un conjunto de individuos que tienen una clase asignada, se busca encontrar la mejor matriz $V^{**}$ que proyecte a los individuos en un espacio $k-dimensional$, con $k$ menor a la dimensión del espacio original. Al encontrar la mejor matriz se logra representar a los individuos, en un espacio de menor dimensión, de tal manera que se encuentren agrupados de acuerdo con la clase a la que pertenecen.
+
+El ADLF encuentra la solución a dicho problema por medio de la maximización del cociente formado por la matriz de dispersión entre-clases (\textit{Between-class scatter matrix}) y la matriz de dispersión intra-clase (\textit{Within-class scatter matrix}), ambas de los individuos proyectados. Maximizar este cociente era considerado computacionalmente costoso, por lo que solía ser remplazado por versiones simplificadas.
+
+El objetivo de este trabajo es proponer el método de Newton-Lanczos como una solución computacionalmente accesible. Este método resuelve iterativamente el problema de maximización aprovechando la velocidad de convergencia del método de Newton. Para medir el desempeño de esta propuesta se compara con la precisión y el tiempo de cómputo de otros métodos de clasificación lineal. 
+
+El primer capítulo de esta tesis profundiza en el problema de optimización planteado por el ADLF. Para esto se definen los conceptos indispensables para el desarrollo de la teoría. Luego, se demuestra que el problema de optimización es equivalente a un problema escalar, por lo que se puede expresar en términos de una función objetivo $f(\rho)$ y un argumento unidimensional $\rho$. Enseguida, se dan las condiciones de existencia de la solución.
+
+En el segundo capítulo se profundiza en el método de Newton-Lanczos, el cual resuelve el problema de encontrar la $\rho$ óptima del problema escalar. Se proporciona una breve presentación de la teoría que sustenta a los métodos de Lanczos, su costo computacional y las ventajas que tienen sobre los métodos tradicionales. Más adelante se combina con el método de Newton, por lo que se requiere formular la derivada de $f(\rho)$. Al final, se proporcionan las condiciones necesarias de optimalidad.
+
+En el tercer capítulo se presenta los experimentos numéricos realizados sobre las bases de datos de las empresas \textit{Otto Group} y \textit{State Farm}. Se eligen estas bases ya que cuentan con una dimensionalidad alta que resulta difícil de manejar en métodos de clasificación tradicionales. Además, se da una breve introducción del preprocesamiento y posteriormente se compara el desempeño del ADLF contra dos métodos de clasificación lineal: el Análisis Discriminante Lineal (ADL) y la Regresión Lineal Múltiple (RLM).
+
+Para el desarrollo de esta tesis se utilizó el lenguaje de programación estadístico R y la paquetería \textit{ProjectTemplate}, que sirve para gestionar proyectos de análisis. Para asegurar la portabilidad y reproducibilidad del proyecto se utilizó la paquetería \textit{Pacman}. Finalmente, para los cálculos se utilizó la biblioteca de \textit{LAPACK (Fortran)} en su versión para OS X 10.11.4 (\textit{liblapack.dylib)}. Los códigos de esta tesis se encuentran para su libre distribución en:
+
+\textit{https://github.com/savrgg/TraceRatio\_Optimization}.
+
