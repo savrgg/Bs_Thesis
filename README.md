@@ -81,9 +81,9 @@ Las conclusiones más relevantes de esta tesis son las siguientes:
 \end{itemize}
 
 ### Iteraciones y valor objetivo ###
-<img src="https://raw.githubusercontent.com/savrgg/Bs_Thesis/master/graphs/Chapter4_Jaffe.png" alt="Drawing" style="float: center;"/>
+<img src="https://raw.githubusercontent.com/savrgg/Bs_Thesis/master/graphs/Chapter4_iteraciones_MNIST.png" alt="Drawing" style="float: center;"/>
 ### Separación en el espacio proyectado ###
-<img src="https://raw.githubusercontent.com/savrgg/Bs_Thesis/master/graphs/Chapter4_Jaffe.png" alt="Drawing" style="float: center;"/>
+<img src="https://raw.githubusercontent.com/savrgg/Bs_Thesis/master/graphs/Chapter4_ejemplo20componentes_MNIST.png" alt="Drawing" style="float: center;"/>
 
 Una de las complicaciones del algoritmo de Lanczos es la reortogonalización de la base. En este estudio se utilizó el método de reortogonalización completa; sin embargo, existen modificaciones al algoritmo que pueden ser exploradas con el objetivo de lograr mayor eficiencia en términos computacionales. Por ejemplo, J.W. Demmel (1997) \cite{demmel1997applied} propone algunas alternativas que pueden ser utilizadas para mejorar el proceso de reortogonalización de la base en el algoritmo de Lanczos.
 
