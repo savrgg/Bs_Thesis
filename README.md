@@ -16,10 +16,10 @@ El segundo capítulo aborda el método para resolver el ADLF: Newton-Lanczos. Al
 
 En el tercer capítulo se presentan los experimentos numéricos sobre las bases JAFFE y MNIST. 
 ### Base JAFFE ###
-<img src="https://github.com/savrgg/TraceRatio_Optimization/blob/master/graphs/Chapter4_Jaffe.png" alt="Drawing" style="float: center;"/>
+<img src="https://raw.githubusercontent.com/savrgg/Bs_Thesis/master/graphs/Chapter4_Jaffe.png" alt="Drawing" style="float: center;"/>
 
 ### Base MNIST ###
-<img src="https://github.com/savrgg/TraceRatio_Optimization/blob/master/graphs/Chapter4_numeros.png" alt="Drawing" style="float: center;"/>
+<img src="https://raw.githubusercontent.com/savrgg/Bs_Thesis/master/graphs/Chapter4_numeros.png" alt="Drawing" style="float: center;"/>
 
 Se da una breve introducción de su preprocesamiento, para continuar con un ejemplo donde se proyecta a una dimensión de tamaño 20. Al final, se compara la precisión del ADLF vía Newton-Lacnzos contra el Análisis Discriminante Lineal (ADL) y la Regresión Logística Múltiple (RLM) para diferentes p. Al final, se realiza una comparación del tiempo de cómputo.
 
