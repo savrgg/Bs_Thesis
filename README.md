@@ -82,6 +82,7 @@ Las conclusiones más relevantes de esta tesis son las siguientes:
 
 ### Iteraciones y valor objetivo ###
 <img src="https://raw.githubusercontent.com/savrgg/Bs_Thesis/master/graphs/Chapter4_iteraciones_MNIST.png" alt="Drawing" style="float: center;"/>
+
 ### Separación en el espacio proyectado ###
 <img src="https://raw.githubusercontent.com/savrgg/Bs_Thesis/master/graphs/Chapter4_ejemplo20componentes_MNIST.png" alt="Drawing" style="float: center;"/>
 
